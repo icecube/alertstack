@@ -117,10 +117,6 @@ class Hypothesis:
     def calculate_llh(self, cat_data):
         # cat_data = cat_data[:100]
         cat_weights = self.weight_catalogue(cat_data)
-        cat_weights /= np.mean(cat_weights)
-        # print(cat_weights)
-        # input("?")
-        # density = np.mean(cat_weights)/(4*np.pi) # * np.mean(self.source_weights)
         density = np.sum(cat_weights)# / (4 * np.pi)
         lh_array = np.zeros(len(cat_data))
 
@@ -129,15 +125,7 @@ class Hypothesis:
             source_weight = self.source_weights[i]
             lh_array += (source_weight * spatial_pdf * cat_weights / density)
 
-        # print(np.sum(lh_array))
-
         llh = np.log(np.sum(lh_array) + 1e-30) - np.log(np.sum(self.source_weights))# - np.log(np.sum(cat_weights))
-
-        # print(np.sum(lh_array/density), cat_weights)
-
-        # llh = 2 * (np.sum(lh_array)) - np.log(density))# - np.mean(self.source_weights))
-
-        # llh = #lh_array/density
         return llh
 
     # def calculate_likelihood(self, cat_data, source):

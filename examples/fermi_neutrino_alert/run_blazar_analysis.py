@@ -10,9 +10,7 @@ ana = Analyse(
     CircularisedNeutrinoAlertCatalogue()
 )
 
-
-
-all_res = ana.iterate_run(injection_hypo=AverageFluxWeightHypothesis, fraction=0.2, nsteps=10)
+all_res = ana.iterate_run(injection_hypo=AverageFluxWeightHypothesis, fraction=0.2, nsteps=3)
 
 sens_threshold = dict()
 disc_threshold = dict()
@@ -29,8 +27,6 @@ for step, res in all_res.items():
     print("Fraction of neutrino alerts correlated to source: {0} \n".format(step))
 
     bkgs = dict()
-
-
 
     for key, val in res.items():
         print(key, np.mean(val), np.median(val), np.std(val))
