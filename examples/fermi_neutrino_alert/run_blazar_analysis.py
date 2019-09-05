@@ -1,8 +1,9 @@
 import numpy as np
 from alertstack.analyse import Analyse
-from alertstack.scramble_catalogues.blazar_catalogue import Fermi4FGLBlazarCatalogue, AverageFluxWeightHypothesis
+from alertstack.scramble_catalogues.blazar_catalogue import Fermi4FGLBlazarCatalogue, AverageFluxWeightHypothesis,\
+    BrightestFluxWeightHypothesis
 from alertstack.fixed_catalogues.icecube_neutrino_alerts import CircularisedNeutrinoAlertCatalogue
-from alertstack.stats import Chi2
+from alertstack.stats import GammaDistribution
 
 ana = Analyse(
     Fermi4FGLBlazarCatalogue(),
@@ -10,17 +11,27 @@ ana = Analyse(
     CircularisedNeutrinoAlertCatalogue()
 )
 
-all_res = ana.iterate_run(injection_hypo=AverageFluxWeightHypothesis, fraction=0.2, nsteps=3)
+all_res = ana.iterate_run(injection_hypo=AverageFluxWeightHypothesis, fraction=1.0, nsteps=5)
 
 sens_threshold = dict()
-disc_threshold = dict()
+disc_3_threshold = dict()
+disc_5_threshold = dict()
 
 zero_key = 0.0
 
 for key, val in all_res[zero_key].items():
     sens_threshold[key] = np.median(val)
+    gd = GammaDistribution(val)
+    disc_3_threshold[key] = gd.calculate_discovery_potential(3.)
+    disc_5_threshold[key] = gd.calculate_discovery_potential(5.)
     # print(Chi2(val))
     # input("?")
+
+levels = [
+    ("Background Median", sens_threshold),
+    ("3 Sigma Discovery Potential", disc_3_threshold),
+    ("5 Sigma Discovery Potential", disc_5_threshold)
+]
 
 
 for step, res in all_res.items():
@@ -31,4 +42,8 @@ for step, res in all_res.items():
     for key, val in res.items():
         print(key, np.mean(val), np.median(val), np.std(val))
         val = np.array(val)
-        print("Fraction above median background:", np.sum(val > sens_threshold[key])/float(len(val)))
+
+        for name, thresh in levels:
+            print(thresh[key])
+            print("Fraction above {0}: {1}".format(
+                name, np.sum(val > thresh[key])/float(len(val))))

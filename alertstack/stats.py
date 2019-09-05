@@ -1,47 +1,48 @@
 import scipy
+from scipy.stats import norm
 import numpy as np
 import matplotlib.pyplot as plt
 
-class Chi2(object):
-
-    """ A class similar to the ones from scipy.stats
-       allowing to fit left-truncated chi^2 distributions.
-    """
+class GammaDistribution:
 
     def __init__(self, data):
-        """ Fit the given ensemble of measurements with a chi^2 function.
-        `data` is a list of test statistics values.
-        `cut` defines where the distribution is truncated.
-        """
 
-        # data = np.mean(data)
+        # default_loc = min(data) - 1e-9
+        default_loc = min(data) - 1.
+        data = np.array(data)
+        cut = min(data)
+        mask = data > cut
 
-        # three parameters will be fitted: dof, location, scale
-        p_start = [1., np.mean(data), 1.]
-        p_bounds = [(0., None),  # dof > 0
-                    (0., max(data)),  # location < 0 for 'truncated'
-                    # effect
-                    (1e-5, 1e5)]  # shape ~ free
 
-        # define the fit function: likelihood for chi^2 distribution,
+        self.frac_under = np.sum(~mask)/float(len(mask))
+        # self.frac_under = 0.
+
+        # left = data > min(data)
+
+        N_left = np.sum(~mask)
+        # data = data[mask]
+        weights = np.ones_like(data) / float(len(data))
+        mask = np.ones_like(data, dtype=np.int)
+
+        p_start = [9., default_loc, 0.5]
+        p_bounds = [(0, None),
+                    (None, default_loc + 0.99),
+                    (1e-5, 1e5)
+                    ]
+
         def func(p):
-            dist = scipy.stats.chi2(p[0], loc=p[1], scale=p[2])
+            dist = scipy.stats.gamma(p[0], loc=p[1], scale=p[2])
             loglh = dist.logpdf(data).sum()
+            loglh += N_left * dist.cdf(cut)
             return -loglh
 
-        res = scipy.optimize.minimize(func, x0=p_start, bounds=p_bounds)
-        print(res)
+        self.res = scipy.optimize.minimize(func, x0=p_start, bounds=p_bounds)
+        print(self.res)
+        self.dist = scipy.stats.gamma(self.res["x"][0], loc=self.res["x"][1], scale=self.res["x"][2])
 
-        if not res.success:
-            print('Chi2 fit did not converge! Result is likely garbage.')
-
-        # self._q_left = N_left / float(N_all)
-        self._cut = 0.
-        self._f = scipy.stats.chi2(res.x[0], loc=min(data), scale=res.x[1])
-        self._ks = scipy.stats.kstest(data, self._f.cdf)[0]
-        self.ndof = res.x[0]
-        self.loc = min(data)
-        self.scale = res.x[1]
+    def calculate_discovery_potential(self, sigma=5.):
+        threshold = (norm.cdf(sigma) - self.frac_under)/(1 - self.frac_under)
+        return self.dist.ppf(threshold)
 
 # def plot_background_ts_distribution(ts_array, path, ts_type="Standard",
 #                                     ts_val=None):

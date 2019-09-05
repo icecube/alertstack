@@ -1,6 +1,7 @@
 import numpy as np
 import healpy as hp
 from scipy.stats import norm
+import random
 
 
 cat_dtype = np.dtype([
@@ -94,20 +95,24 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
 
     def __init__(self, nside=1024):
         ScrambleCatalogue.__init__(self)
-        self.nside = nside
-        print("NSIDE = {0}, Max Pixel Radius = {1} deg".format(nside, np.degrees(hp.max_pixrad(nside))))
-        self.cone_ids = [x for x in range(hp.nside2npix(self.nside)) if x not in gal_plane_1024]
+        # self.nside = nside
+        # print("NSIDE = {0}, Max Pixel Radius = {1} deg".format(nside, np.degrees(hp.max_pixrad(nside))))
+        # self.cone_ids = [x for x in range(hp.nside2npix(self.nside)) if x not in gal_plane_1024]
 
     def scramble_positions(self):
-        indexes = np.random.choice(len(self.cone_ids), size=len(self.data))
-        return self.extract_ra_dec(self.nside, indexes)
+
+        ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
+        dec_vals = np.arccos(2.*np.random.uniform(size=len(self.data)) - 1) - np.pi/2.
+        return ra_vals, dec_vals
+        # indexes = np.random.choice(len(self.cone_ids), size=len(self.data))
+        # return self.extract_ra_dec(self.nside, indexes)
 
 class Hypothesis:
     name = None
 
     def __init__(self, fixed_catalogue):
         self.fixed_catalogue = fixed_catalogue
-        self.source_weights = np.array([source.eval_source_weight() for source in fixed_catalogue])
+        self.source_weights = np.array([source.eval_source_weight() for source in self.fixed_catalogue])
         # self.source_weights /= np.mean(self.source_weights)
 
     @staticmethod
@@ -115,17 +120,24 @@ class Hypothesis:
         return NotImplementedError
 
     def calculate_llh(self, cat_data):
-        # cat_data = cat_data[:100]
         cat_weights = self.weight_catalogue(cat_data)
         density = np.sum(cat_weights)# / (4 * np.pi)
-        lh_array = np.zeros(len(cat_data))
-
+        # lh_array = np.zeros(len(cat_data))
+        lh_array = 0.
         for i, source in enumerate(self.fixed_catalogue):
             spatial_pdf = source.eval_spatial_pdf(cat_data["ra_rad"], cat_data["dec_rad"]) * (4 * np.pi)
             source_weight = self.source_weights[i]
-            lh_array += (source_weight * spatial_pdf * cat_weights / density)
 
-        llh = np.log(np.sum(lh_array) + 1e-30) - np.log(np.sum(self.source_weights))# - np.log(np.sum(cat_weights))
+            prob = np.sum(source_weight * spatial_pdf * cat_weights / density)
+
+            # print(prob)
+            # input("?")
+            #
+            # if prob > 0:
+            lh_array += np.log(prob + 1.)
+
+        llh = lh_array - np.log(np.sum(self.source_weights))
+        # llh = np.log(np.sum(lh_array) + 1.) - np.log(np.sum(self.source_weights))# - np.log(np.sum(cat_weights))
         return llh
 
     # def calculate_likelihood(self, cat_data, source):
@@ -159,22 +171,35 @@ class Hypothesis:
 
             inj_cat = []
 
+            inj_sources = []
+
             for i in ind:
                 fixed_source = self.fixed_catalogue[i]
 
+                mask = np.array([k not in inj_sources for k, _ in enumerate(cat)])
+
                 # Choose which counterpart, according to the weighting scheme
-                weights = self.weight_catalogue(cat)
+                weights = self.weight_catalogue(cat[mask])
                 weights /= np.sum(weights)
                 j = np.random.choice(len(weights), p=weights)
+                inj_sources.append(j)
 
                 # Simulate new source position, and remove from catalogue
 
-                cat_obj = cat[j].copy()
+                cat_obj = cat[mask][j].copy()
                 cat_obj["ra_rad"], cat_obj["dec_rad"] = fixed_source.simulate_position()
+
+                # print(fixed_source.eval_spatial_pdf(cat_obj["ra_rad"], cat_obj["dec_rad"]))
+                # input("?")
+
                 cat = np.delete(cat, j)
                 inj_cat.append(cat_obj)
 
             inj_cat = np.array(inj_cat, dtype=cat.dtype)
+
+            # print(np.sum(inj_cat["Flux1000"]))
+            # input("?")
+
             cat = np.append(cat, inj_cat)
 
         return cat

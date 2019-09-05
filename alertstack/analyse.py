@@ -30,10 +30,12 @@ class Analyse:
 
         return res
 
-    def run_trials(self, injection_hypo=None, n_trials=100, fraction=0.0):
+    def run_trials(self, injection_hypo_class=None, n_trials=100, fraction=0.0):
         res = None
-        if injection_hypo is not None:
-            injection_hypo = injection_hypo(self.fixed_sources)
+        if injection_hypo_class is not None:
+            injection_hypo = injection_hypo_class(self.fixed_sources)
+        else:
+            injection_hypo = None
         for _ in tqdm(range(n_trials)):
             if res is None:
                 res = self.run_trial(injection_hypo, fraction=fraction)
@@ -51,10 +53,10 @@ class Analyse:
 
         all_res = dict()
         all_res[0.0] = self.run_trials(injection_hypo, n_trials*10, fraction=0.0)
-        #
-        for step in steps:
 
-            all_res[step] = self.run_trials(injection_hypo, n_trials, fraction=step)
+        if np.logical_and(injection_hypo is not None, fraction > 0.0):
+            for step in steps:
+                all_res[step] = self.run_trials(injection_hypo, n_trials, fraction=step)
 
         return all_res
 
