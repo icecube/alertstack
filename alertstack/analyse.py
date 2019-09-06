@@ -1,17 +1,30 @@
-import healpy as hp
-import random
+import pickle
+import os
 import numpy as np
 from tqdm import tqdm
 
 
 class Analyse:
 
-    def __init__(self, cat, hypos, fixed_sources):
+    def __init__(self, cat, hypos, fixed_sources, cache_dir, clean_cache=False):
         self.base_cat = cat
         self.fixed_sources = fixed_sources
+        self.cache_dir = cache_dir
         self.hypos = dict()
         for hypo in hypos:
             self.hypos[hypo.name] = hypo(fixed_sources)
+
+        if clean_cache:
+            self.clean_cache()
+
+        self.all_res = dict()
+
+        self.pid = None
+
+
+
+    def save_path(self):
+        return os.path.join(self.cache_dir, "{0}.pkl".format(self.pid))
 
     def run_trial(self, injection_hypo=None, fraction=0.0):
 
@@ -58,7 +71,66 @@ class Analyse:
             for step in steps:
                 all_res[step] = self.run_trials(injection_hypo, n_trials, fraction=step)
 
-        return all_res
+        self.all_res = all_res
+
+        self.dump_results()
+
+    @staticmethod
+    def combine_res_dicts(dict_a, dict_b):
+        for hypo, hypo_res in dict_a.items():
+            if hypo in dict_b.keys():
+                for key, val in dict_a[hypo].items():
+                    if key in dict_b[hypo].keys():
+                        dict_b[hypo][key] += val
+                    else:
+                        dict_b[hypo][key] = val
+            else:
+                dict_b[hypo] = hypo_res
+
+        return dict_b
+
+    def dump_results(self):
+        savepath = self.save_path()
+        if os.path.isfile(savepath):
+            cache_results = self.load_cache()
+            self.all_res = self.combine_res_dicts(cache_results, self.all_res)
+
+        print("Saving to:", savepath)
+
+        print(self.all_res.keys())
+
+        with open(savepath, "wb") as f:
+            pickle.dump(self.all_res, f)
+
+    def load_cache(self):
+        savepath = self.save_path()
+        with open(savepath, "rb") as f:
+            cache_results = pickle.load(f)
+        return cache_results
+
+    def find_cache_files(self):
+        return [os.path.join(self.cache_dir, x) for x in os.listdir(self.cache_dir) if ".pkl" in x]
+
+    def load_results(self):
+
+        self.all_res = dict()
+
+        for file in self.find_cache_files():
+            with open(file, "rb") as f:
+                cache_dict = pickle.load(f)
+                self.all_res = self.combine_res_dicts(self.all_res, cache_dict)
+
+        self.clean_cache()
+        self.dump_results()
+        return self.all_res
+
+    def clean_cache(self):
+        for file in self.find_cache_files():
+            os.remove(file)
+
+    def sensitivity_threshold(self):
+        return
+
 
 
 
