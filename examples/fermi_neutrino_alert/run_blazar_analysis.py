@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import logging
 from alertstack.analyse import Analyse
 from alertstack.scramble_catalogues.blazar_catalogue import Fermi4FGLBlazarCatalogue, AverageFluxWeightHypothesis,\
     BrightestFluxWeightHypothesis
@@ -9,7 +10,14 @@ from examples.fermi_neutrino_alert import blazar_analysis
 
 if __name__ == "__main__":
 
-    blazar_analysis.iterate_run(n_trials=5000, injection_hypo=AverageFluxWeightHypothesis, fraction=1.0, nsteps=5)
+    logging.getLogger().setLevel("INFO")
+
+    blazar_analysis.iterate_run(
+        n_trials=100,
+        injection_hypo=AverageFluxWeightHypothesis,
+        fraction=0.5,
+        nsteps=5,
+    )
 
     all_res = blazar_analysis.load_results()
 

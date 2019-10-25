@@ -50,6 +50,9 @@ class PointSource:
     def simulate_position(self):
         raise NotImplementedError
 
+    def eval_source_weight(self):
+        return self.weight
+
 class Catalogue:
 
     def __init__(self):
@@ -128,7 +131,7 @@ class Hypothesis:
             spatial_pdf = source.eval_spatial_pdf(cat_data["ra_rad"], cat_data["dec_rad"]) * (4 * np.pi)
             source_weight = self.source_weights[i]
 
-            prob = np.sum(source_weight * spatial_pdf * cat_weights / density)
+            prob = max(source_weight * spatial_pdf * cat_weights / density)
 
             # print(prob)
             # input("?")
@@ -136,25 +139,16 @@ class Hypothesis:
             # if prob > 0:
             lh_array += np.log(prob + 1.)
 
-        llh = lh_array - np.log(np.sum(self.source_weights))
-        # llh = np.log(np.sum(lh_array) + 1.) - np.log(np.sum(self.source_weights))# - np.log(np.sum(cat_weights))
+        llh = lh_array# - np.log(np.sum(self.source_weights))
         return llh
-
-    # def calculate_likelihood(self, cat_data, source):
-    #     cat_weights = self.weight_catalogue(cat_data)
-    #     spatial_weights = source.eval_spatial_pdf(cat_data)
-    #     return np.sum(cat_weights)
-    #
-    # def stack_llh(self, hypo, cat):
-    #     lh = 0
-    #     for source in self.fixed_catalogue:
-    #         lh += self.calculate_likelihood(hypo, cat, source)
-    #     return np.log(lh)
 
     def inject_signal(self, cat, fraction):
 
-        n_exp = fraction * float(len(self.source_weights))
+        n_exp = fraction * np.sum(self.source_weights)
         n_inj = np.random.poisson(n_exp)
+
+        # print("Expectation of {0}, injecting {1}".format(n_exp, n_inj))
+        # input('?')
 
         if n_inj > len(cat):
             raise Exception("Trying to inject more sources than there are entries in the catalogue! \n"

@@ -12,8 +12,8 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
 
-        hdul = fits.open("data/gll_psc_v19.fit")
-        cat = hdul["LAT_Point_Source_Catalog"].data
+        with fits.open("data/gll_psc_v19.fit") as hdul:
+            cat = hdul["LAT_Point_Source_Catalog"].data
         cat = np.sort(cat, order="Flux1000")[::-1]
 
         logging.info("Selecting blazars from 4FGL catalogue")
@@ -21,9 +21,9 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         blazar_class = ["bll", "BLL", "fsrq", "FSRQ"]
 
         logging.info("Using all sources from class {0}".format(blazar_class))
-
+        #
         mask = np.array([x["CLASS1"] in blazar_class for x in cat])
-        blazars = cat[mask]
+        blazars = np.array(cat[mask])
 
         maps = [
             ("RAJ2000", "ra_rad"),
@@ -52,4 +52,13 @@ class AverageFluxWeightHypothesis(Hypothesis):
     @staticmethod
     def weight_catalogue(cat_data):
         return cat_data["Flux1000"]
+
+class BrightestFluxWeightHypothesis(Hypothesis):
+    name = "brightest_flux_weight"
+
+    @staticmethod
+    def weight_catalogue(cat_data):
+        weights = cat_data["Flux1000"]
+        weights[100:] = 0.
+        return weights
 

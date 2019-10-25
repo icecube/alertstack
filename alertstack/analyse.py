@@ -2,6 +2,7 @@ import pickle
 import os
 import numpy as np
 from tqdm import tqdm
+from alertstack.stats import GammaDistribution
 
 
 class Analyse:
@@ -18,6 +19,8 @@ class Analyse:
             self.clean_cache()
 
         self.all_res = dict()
+        self.ts_fits = dict()
+        self.sensitivity_thresholds = dict()
 
         self.pid = None
 
@@ -122,14 +125,30 @@ class Analyse:
 
         self.clean_cache()
         self.dump_results()
+        self.fit_results()
         return self.all_res
 
     def clean_cache(self):
         for file in self.find_cache_files():
             os.remove(file)
 
-    def sensitivity_threshold(self):
-        return
+    def fit_results(self):
+        for key, val in self.all_res[0.0].items():
+            self.sensitivity_thresholds[key] = np.median(val)
+            self.ts_fits[key] = GammaDistribution(val)
+
+    def discovery_threshold(self, hypo, sigma=5.):
+        return self.ts_fits[hypo].calculate_discovery_potential(sigma)
+
+    def find_overfluctuations(self, key, threshold, **kwargs):
+        pass
+
+    def find_sensitivity(self):
+        return self.find_overfluctuations("sensitivity", 0.9)
+
+    def find_discovery_potential(self, sigma=5.):
+        return self.find_overfluctuations("discovery", 0.5, sigma=sigma)
+
 
 
 
