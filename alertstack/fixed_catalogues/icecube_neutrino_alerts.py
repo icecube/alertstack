@@ -3,7 +3,7 @@ import logging
 import pickle
 from scipy.stats import norm
 from scipy import sparse
-from alertstack import PointSource, FixedCatalogue
+from alertstack import PointSource, FixedCatalogue, is_outside_GP
 import healpy as hp
 import os
 
@@ -62,15 +62,20 @@ class HealpixNeutrinoAlert(PointSource):
         self.probs[self.mask] = np.array(self.pkl_dict["prob"])
         self.n_pixels = float(len(self.probs))
         self.nside = hp.pixelfunc.npix2nside(self.n_pixels)
+        self.ra_rad,self.dec_rad = self.extract_ra_dec(np.where(self.probs == np.max(self.probs)))
+        self.ra_deg = self.pkl_dict["RA"]  
+        self.dec_deg = self.pkl_dict["DEC"]
 
         try:
-            self.weight = self.pkl_dict["signalness"]
+            self.weight = self.pkl_dict["SIGNAL"]
+            if type(self.weight)== str: # some neutrinos don't have signalness? just 2 or 3
+                self.weight = 0.5
         except KeyError:
-            self.weight = 1.
+            self.weight = 0.5
 
     def signal_pdf(self, ra, dec):
         colat = np.pi / 2. - dec
-        return hp.pixelfunc.get_interp_val(self.probs, ra, colat, lonlat=False)
+        return hp.pixelfunc.get_interp_val(self.probs, colat, ra, lonlat=False)
 
     def bkg_spatial_pdf(self):
         return 1./self.n_pixels
@@ -125,7 +130,8 @@ class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
 
         self.data += nu_objs
 
-dir = "/Users/robertstein/Realtime_Stuff/alert_archive/output_raw_fits/compressed_files/"
+#dir = "/Users/robertstein/Realtime_Stuff/alert_archive/output_raw_fits/compressed_files/"
+dir = "/Users/crislagual/Documents/phd/1_year/alertstack/data/alerts_archive/compressed_files"
 
 class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
 
@@ -138,7 +144,10 @@ class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
         files = [x for x in os.listdir(dir) if ".pkl" in x]
         for filename in files:
             path =  os.path.join(dir, filename)
-            nu_objs.append(HealpixNeutrinoAlert(path))
+            nu = HealpixNeutrinoAlert(path)
+            nu_objs.append(nu)
+            #    if is_outside_GP(np.rad2deg(nu.ra_rad),np.rad2deg(nu.dec_rad)): # only store those outside GP
+            #        nu_objs.append(nu)
 
         return nu_objs
 
