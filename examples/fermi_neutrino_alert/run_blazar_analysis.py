@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
 
     for step, res in all_res.items():
-        print("Fraction of neutrino alerts correlated to source: {0} \n".format(step))
+        print("\nFraction of neutrino alerts correlated to source: {0} \n".format(step))
 
         bkgs = dict()
 
