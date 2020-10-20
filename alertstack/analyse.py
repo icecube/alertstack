@@ -3,6 +3,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 from alertstack.stats import GammaDistribution
+from datetime import datetime
 
 
 class Analyse:
@@ -22,11 +23,12 @@ class Analyse:
         self.ts_fits = dict()
         self.sensitivity_thresholds = dict()
 
-        self.pid = None
+        self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
 
 
     def save_path(self):
+        self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return os.path.join(self.cache_dir, "{0}.pkl".format(self.pid))
 
     def run_trial(self, injection_hypo=None, fraction=0.0):
@@ -72,6 +74,7 @@ class Analyse:
 
         if np.logical_and(injection_hypo is not None, fraction > 0.0):
             for step in steps:
+            #for step in range(fraction): # step and fraction are going to be the number of injected neutrinos 
                 all_res[step] = self.run_trials(injection_hypo, n_trials, fraction=step)
 
         self.all_res = all_res
@@ -118,12 +121,14 @@ class Analyse:
 
         self.all_res = dict()
 
-        for file in self.find_cache_files():
-            with open(file, "rb") as f:
-                cache_dict = pickle.load(f)
-                self.all_res = self.combine_res_dicts(self.all_res, cache_dict)
+        list_of_files = self.find_cache_files()
+        latest_file = max(list_of_files, key=os.path.getctime)
+        #for file in self.find_cache_files():
+        with open(latest_file, "rb") as f:
+            cache_dict = pickle.load(f)
+            self.all_res = self.combine_res_dicts(self.all_res, cache_dict)
 
-        self.clean_cache()
+        #self.clean_cache()
         self.dump_results()
         self.fit_results()
         return self.all_res
