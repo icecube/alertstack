@@ -1,7 +1,7 @@
 from astropy.io import fits
 import numpy as np
 import logging
-from alertstack import IsotropicExtragalacticCatalogue, Hypothesis
+from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP
 from numpy.lib.recfunctions import rename_fields
 
 class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
@@ -12,17 +12,17 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
 
-        with fits.open("data/gll_psc_v19.fit") as hdul:
-            cat = hdul["LAT_Point_Source_Catalog"].data
+        with fits.open("data/table_4LAC.fits") as hdul:
+            cat = hdul[1].data
         cat = np.sort(cat, order="Flux1000")[::-1]
 
         logging.info("Selecting blazars from 4FGL catalogue")
 
-        blazar_class = ["bll", "BLL", "fsrq", "FSRQ"]
+        blazar_class = ["bll", "BLL", "fsrq", "FSRQ", "bcu", "BCU"]
 
         logging.info("Using all sources from class {0}".format(blazar_class))
         #
-        mask = np.array([x["CLASS1"] in blazar_class for x in cat])
+        mask = np.array([x["CLASS"] in blazar_class for x in cat])
         blazars = np.array(cat[mask])
 
         maps = [
@@ -33,6 +33,9 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         for (old_key, new_key) in maps:
 
             blazars = rename_fields(blazars, {old_key: new_key})
+
+        mask_GP = [is_outside_GP(blazars['ra_rad'][i],blazars['dec_rad'][i]) for i in range(len(blazars))]
+        blazars = blazars[mask_GP] 
 
         logging.info("Found {0} sources in total".format(len(blazars)))
 
