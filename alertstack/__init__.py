@@ -2,7 +2,9 @@ import numpy as np
 import healpy as hp
 from scipy.stats import norm
 import random
-
+from astropy import units as u
+from astropy.coordinates import SkyCoord  
+from numba import jit
 
 cat_dtype = np.dtype([
     ("Ra", np.float),
@@ -102,13 +104,39 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
         # print("NSIDE = {0}, Max Pixel Radius = {1} deg".format(nside, np.degrees(hp.max_pixrad(nside))))
         # self.cone_ids = [x for x in range(hp.nside2npix(self.nside)) if x not in gal_plane_1024]
 
-    def scramble_positions(self):
+    def scramble_positions(cat):
 
-        ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
-        dec_vals = np.arccos(2.*np.random.uniform(size=len(self.data)) - 1) - np.pi/2.
+        # scramble positions directly outside the galactic plane
+        gal_l_vals = np.random.uniform(low=0,high=2*np.pi,size=len(cat.data))
+     
+        # divide the sky into two areas, half of the blazars in each side
+        threshold = np.deg2rad(10) # 10 degrees 
+        size_half = int(len(cat.data)/2)
+
+        gal_b_vals_up = np.arccos(2*np.random.uniform(low=0,high=0.5*(1-np.sin(threshold)),size=size_half)-1) - np.pi/2.
+        gal_b_vals_down = np.arccos(2*np.random.uniform(low=0.5*(1+np.sin(threshold)),high=1,size=(len(cat.data)-size_half))-1) - np.pi/2.
+        gal_b_vals = np.concatenate((gal_b_vals_down,gal_b_vals_up),axis=0)
+
+        gal = SkyCoord(l = gal_l_vals*u.rad, b = gal_b_vals*u.rad,frame='galactic')
+        ra_vals = gal.icrs.ra.rad
+        dec_vals = gal.icrs.dec.rad 
+        
+        #ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
+        #dec_vals = np.arccos(2.*np.random.uniform(size=len(self.data)) - 1) - np.pi/2.
+
         return ra_vals, dec_vals
         # indexes = np.random.choice(len(self.cone_ids), size=len(self.data))
         # return self.extract_ra_dec(self.nside, indexes)
+
+
+def is_outside_GP(ra,dec):  
+
+    eq = SkyCoord(ra*u.deg, dec*u.deg, frame='icrs')
+    gal = eq.galactic
+
+    threshold_GP = 10.0*u.deg
+
+    return abs(gal.b) > threshold_GP
 
 class Hypothesis:
     name = None
@@ -122,6 +150,7 @@ class Hypothesis:
     def weight_catalogue(cat_data):
         return NotImplementedError
 
+    #@jit(fastmath=True,parallel=True)
     def calculate_llh(self, cat_data):
         cat_weights = self.weight_catalogue(cat_data)
         density = np.sum(cat_weights)# / (4 * np.pi)
@@ -129,9 +158,12 @@ class Hypothesis:
         lh_array = 0.
         for i, source in enumerate(self.fixed_catalogue):
             spatial_pdf = source.eval_spatial_pdf(cat_data["ra_rad"], cat_data["dec_rad"]) * (4 * np.pi)
+            # this is too slow
+            spatial_pdf_mask = np.where(is_outside_GP(np.rad2deg(cat_data["ra_rad"]), np.rad2deg(cat_data["dec_rad"])) == False, 0.0, np.array(spatial_pdf)) # zero everything inside GP
+
             source_weight = self.source_weights[i]
 
-            prob = max(source_weight * spatial_pdf * cat_weights / density)
+            prob = sum(source_weight * spatial_pdf * cat_weights / density) # instead of max 
 
             # print(prob)
             # input("?")
@@ -146,6 +178,7 @@ class Hypothesis:
 
         n_exp = fraction * np.sum(self.source_weights)
         n_inj = np.random.poisson(n_exp)
+        #n_inj = fraction
 
         # print("Expectation of {0}, injecting {1}".format(n_exp, n_inj))
         # input('?')
@@ -160,8 +193,9 @@ class Hypothesis:
         if n_inj > 0:
 
             # Choose which fixed source will have a counterpart
-            ind = np.random.choice(len(self.source_weights), size=n_inj,
-                                  p=self.source_weights/np.sum(self.source_weights))
+            ind = np.random.choice(len(self.source_weights), size=n_inj, p=self.source_weights/np.sum(self.source_weights)) 
+            while len(ind) != len(set(ind)):
+                ind = np.random.choice(len(self.source_weights), size=n_inj, p=self.source_weights/np.sum(self.source_weights))
 
             inj_cat = []
 
@@ -180,21 +214,27 @@ class Hypothesis:
 
                 # Simulate new source position, and remove from catalogue
 
-                cat_obj = cat[mask][j].copy()
-                cat_obj["ra_rad"], cat_obj["dec_rad"] = fixed_source.simulate_position()
+                #cat_obj = cat[mask][j].copy()
+                
+                # for some events sum(self.probs) was slightly dif than 1 (has to be 10e-8 max)
+                try:
+                    cat[j]["ra_rad"], cat[j]["dec_rad"] = fixed_source.simulate_position()
+                except:
+                    fixed_source.probs = fixed_source.probs / sum(fixed_source.probs)
+                    cat[j]["ra_rad"], cat[j]["dec_rad"] = fixed_source.simulate_position()
 
                 # print(fixed_source.eval_spatial_pdf(cat_obj["ra_rad"], cat_obj["dec_rad"]))
                 # input("?")
 
-                cat = np.delete(cat, j)
-                inj_cat.append(cat_obj)
+                #cat = np.delete(cat, j)
+                #inj_cat.append(cat_obj)
 
-            inj_cat = np.array(inj_cat, dtype=cat.dtype)
+            #inj_cat = np.array(inj_cat, dtype=cat.dtype)
 
             # print(np.sum(inj_cat["Flux1000"]))
             # input("?")
 
-            cat = np.append(cat, inj_cat)
+            #cat = np.append(cat, inj_cat)
 
         return cat
 
