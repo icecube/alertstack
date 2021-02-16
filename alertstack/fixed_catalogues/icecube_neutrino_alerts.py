@@ -131,9 +131,11 @@ class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
 
         self.data += nu_objs
 
-#dir = "/Users/robertstein/Realtime_Stuff/alert_archive/output_raw_fits/compressed_files/"
-#dir = "/Users/crislagual/Documents/phd/1_year/alertstack/data/alerts_archive/compressed_files"
-dir = "/afs/ifh.de/user/l/lagual/alertstack/data/alerts_archive/compressed_files"
+try:
+    dir = os.environ['NU_SKYMAP_DIR']
+except KeyError:
+    logging.warning("No NU_SKYMAP_DIR variable set. If you do not set this, importing a "
+                   "HealpixNeutrinoAlertCatalogue will raise an error.")
 
 class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
 
@@ -152,6 +154,3 @@ class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
             #        nu_objs.append(nu)
 
         return nu_objs
-
-HealpixNeutrinoAlertCatalogue()
-
