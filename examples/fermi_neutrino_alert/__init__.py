@@ -11,5 +11,5 @@ blazar_analysis = Analyse(
     [AverageFluxWeightHypothesis],
     HealpixNeutrinoAlertCatalogue(),
     cache_dir=blazar_cache,
-    clean_cache=True
+    clean_cache=False
 )

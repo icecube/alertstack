@@ -96,6 +96,10 @@ class Analyse:
         return dict_b
 
     def dump_results(self):
+
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+
         savepath = self.save_path()
         if os.path.isfile(savepath):
             cache_results = self.load_cache()

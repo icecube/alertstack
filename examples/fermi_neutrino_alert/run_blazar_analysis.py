@@ -4,7 +4,7 @@ import logging
 from alertstack.analyse import Analyse
 from alertstack.scramble_catalogues.blazar_catalogue import Fermi4FGLBlazarCatalogue, AverageFluxWeightHypothesis,\
     BrightestFluxWeightHypothesis
-from alertstack.fixed_catalogues.icecube_neutrino_alerts import CircularisedNeutrinoAlertCatalogue
+#from alertstack.fixed_catalogues.icecube_neutrino_alerts import CircularisedNeutrinoAlertCatalogue
 from alertstack.stats import GammaDistribution
 from examples.fermi_neutrino_alert import blazar_analysis
 
@@ -13,10 +13,10 @@ if __name__ == "__main__":
     logging.getLogger().setLevel("INFO")
 
     blazar_analysis.iterate_run(
-        n_trials=100,
+        n_trials=500,
         injection_hypo=AverageFluxWeightHypothesis,
         fraction=0.5,
-        nsteps=5,
+        nsteps=10,
     )
 
     all_res = blazar_analysis.load_results()

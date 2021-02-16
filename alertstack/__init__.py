@@ -4,7 +4,6 @@ from scipy.stats import norm
 import random
 from astropy import units as u
 from astropy.coordinates import SkyCoord  
-from numba import jit
 
 cat_dtype = np.dtype([
     ("Ra", np.float),
@@ -150,7 +149,7 @@ class Hypothesis:
     def weight_catalogue(cat_data):
         return NotImplementedError
 
-    #@jit(fastmath=True,parallel=True)
+    
     def calculate_llh(self, cat_data):
         cat_weights = self.weight_catalogue(cat_data)
         density = np.sum(cat_weights)# / (4 * np.pi)

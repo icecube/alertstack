@@ -57,7 +57,8 @@ class HealpixNeutrinoAlert(PointSource):
         logging.info("Loading from {0}".format(pkl_path))
         with open(self.pkl_path, "rb") as f:
             self.pkl_dict = pickle.load(f)
-        self.mask = sparse.load_npz(self.pkl_dict["output_path"]).toarray()[0]
+        #self.mask = sparse.load_npz(self.pkl_dict["output_path"]).toarray()[0]
+        self.mask = sparse.load_npz(os.path.splitext(self.pkl_path)[0]+".npz").toarray()[0] 
         self.probs = np.zeros(len(self.mask))
         self.probs[self.mask] = np.array(self.pkl_dict["prob"])
         self.n_pixels = float(len(self.probs))
@@ -131,7 +132,8 @@ class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
         self.data += nu_objs
 
 #dir = "/Users/robertstein/Realtime_Stuff/alert_archive/output_raw_fits/compressed_files/"
-dir = "/Users/crislagual/Documents/phd/1_year/alertstack/data/alerts_archive/compressed_files"
+#dir = "/Users/crislagual/Documents/phd/1_year/alertstack/data/alerts_archive/compressed_files"
+dir = "/afs/ifh.de/user/l/lagual/alertstack/data/alerts_archive/compressed_files"
 
 class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
 
