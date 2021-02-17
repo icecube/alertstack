@@ -55,4 +55,4 @@ for step, res in all_res.items():
 
         for name, thresh in levels:
             logging.debug(thresh[key])
-            logging.debug(f"Fraction above {name}: {np.sum(val > thresh[key])/float(len(val)))}")
+            logging.debug(f"Fraction above {name}: {np.sum(val > thresh[key])/float(len(val))}")
