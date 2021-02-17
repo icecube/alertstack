@@ -20,7 +20,7 @@ blazar_analysis.iterate_run(
     n_trials=50,
     injection_hypo=AverageFluxWeightHypothesis,
     fraction=0.5,
-    nsteps=5,
+    n_steps=5,
 )
 
 all_res = blazar_analysis.load_results()

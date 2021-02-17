@@ -56,11 +56,15 @@ class Analyse:
 
     def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, n_steps=10, **kwargs):
 
+        # Create list of fractions to loop over. Includes ten times as many background trials.
+
         fs = [0.0 for _ in range(n_trials * 10)]
         for step in np.linspace(0.0, fraction, n_steps + 1)[1:]:
             fs += [step for _ in range(n_trials)]
 
-        inputs = [(injection_hypo, x, int(random.random() * 10 ** 8)) for x in fs]
+        # Create input list and run multiprocessing
+
+        inputs = [(injection_hypo(self.fixed_sources), x, int(random.random() * 10 ** 8)) for x in fs]
         results = process_map(self.run_trial_wrapper, inputs, **kwargs)
         all_res = dict()
 
