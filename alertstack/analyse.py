@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from alertstack.stats import GammaDistribution
 from datetime import datetime
+import logging
 
 
 class Analyse:
@@ -105,9 +106,7 @@ class Analyse:
             cache_results = self.load_cache()
             self.all_res = self.combine_res_dicts(cache_results, self.all_res)
 
-        print("Saving to:", savepath)
-
-        print(self.all_res.keys())
+        logging.info(f"Saving to: {savepath}")
 
         with open(savepath, "wb") as f:
             pickle.dump(self.all_res, f)
