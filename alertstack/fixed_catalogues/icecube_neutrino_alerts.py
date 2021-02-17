@@ -3,7 +3,7 @@ import logging
 import pickle
 from scipy.stats import norm
 from scipy import sparse
-from alertstack import PointSource, FixedCatalogue, is_outside_GP
+from alertstack import PointSource, FixedCatalogue, is_outside_GP, alertstack_data_dir
 import healpy as hp
 import os
 
@@ -99,7 +99,7 @@ class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
     @staticmethod
     def parse_data():
         nu_objs = []
-        with open("data/catalog_of_alerts.txt", "r") as f:
+        with open(os.path.join(alertstack_data_dir, "catalog_of_alerts.txt"), "r") as f:
             for line in f.readlines():
                 if line[0] not in ["#", "\n"]:
                     if "retracted" not in line:
@@ -132,7 +132,7 @@ class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
         self.data += nu_objs
 
 try:
-    dir = os.environ['NU_SKYMAP_DIR']
+    skymap_dir = os.environ['NU_SKYMAP_DIR']
 except KeyError:
     logging.warning("No NU_SKYMAP_DIR variable set. If you do not set this, importing a "
                    "HealpixNeutrinoAlertCatalogue will raise an error.")
@@ -143,11 +143,11 @@ class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
     def parse_data():
         nu_objs = []
 
-        logging.info("Loading from {0}".format(dir))
+        logging.info("Loading from {0}".format(skymap_dir))
 
-        files = [x for x in os.listdir(dir) if ".pkl" in x]
+        files = [x for x in os.listdir(skymap_dir) if ".pkl" in x]
         for filename in files:
-            path =  os.path.join(dir, filename)
+            path =  os.path.join(skymap_dir, filename)
             nu = HealpixNeutrinoAlert(path)
             nu_objs.append(nu)
             #    if is_outside_GP(np.rad2deg(nu.ra_rad),np.rad2deg(nu.dec_rad)): # only store those outside GP

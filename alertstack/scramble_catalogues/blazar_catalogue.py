@@ -1,7 +1,8 @@
 from astropy.io import fits
 import numpy as np
+import os
 import logging
-from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP
+from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
 from numpy.lib.recfunctions import rename_fields
 
 class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
@@ -12,7 +13,7 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
 
-        with fits.open("data/table_4LAC.fits") as hdul:
+        with fits.open(os.path.join(alertstack_data_dir, "table_4LAC.fits")) as hdul:
             cat = hdul[1].data
         cat = np.sort(cat, order="Flux1000")[::-1]
 
