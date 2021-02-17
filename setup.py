@@ -30,7 +30,7 @@ setuptools.setup(
         "matplotlib",
         "astropy",
         "coveralls",
-        "tqdm"
+        "tqdm>=4.42.0"
     ],
     package_data={'alertstack': [
         'alertstack/data/*']},
