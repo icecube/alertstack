@@ -6,7 +6,7 @@ from alertstack.scramble_catalogues.blazar_catalogue import Fermi4FGLBlazarCatal
     BrightestFluxWeightHypothesis
 #from alertstack.fixed_catalogues.icecube_neutrino_alerts import CircularisedNeutrinoAlertCatalogue
 from alertstack.stats import GammaDistribution
-from examples.fermi_neutrino_alert import blazar_analysis
+from examples.fermi_blazar_neutrino_alert import blazar_analysis
 
 if __name__ == "__main__":
 
