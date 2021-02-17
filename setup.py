@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     license="MIT",
     keywords="astroparticle physics science unbinned likelihood IceCube",
-    url="https://github.com/IceCubeOpenSource/alertstack",
+    url="https://github.com/icecube/alertstack",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3.7",
@@ -28,7 +28,7 @@ setuptools.setup(
         "astropy",
     ],
     package_data={'alertstack': [
-        'data/*']},
+        'alertstack/data/*']},
     include_package_data=True
 )
 
