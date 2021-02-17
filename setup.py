@@ -22,9 +22,9 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=[
-        "numpy",
+        "numpy>=1.17.0",
         "healpy",
         "scipy",
         "matplotlib",
