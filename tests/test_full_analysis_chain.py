@@ -4,10 +4,9 @@ import logging
 from alertstack.analyse import Analyse
 from alertstack.scramble_catalogues.blazar_catalogue import Fermi4FGLBlazarCatalogue, AverageFluxWeightHypothesis
 from alertstack.fixed_catalogues.icecube_neutrino_alerts import CircularisedNeutrinoAlertCatalogue
-from pathlib import Path
 from alertstack.stats import GammaDistribution
 
-blazar_cache = os.path.join(Path().resolve(), "cache/")
+blazar_cache = os.path.join(os.path.dirname(__file__), "test_cache/")
 
 blazar_analysis = Analyse(
     Fermi4FGLBlazarCatalogue(),
