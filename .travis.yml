@@ -7,9 +7,11 @@ matrix:
   - python: 3.8
   - python: 3.9
 script:
-  - coverage run --concurrency=multiprocessing -m unittest discover tests/
-  - coverage combine
+- coverage run --concurrency=multiprocessing -m unittest discover tests/
+- coverage combine
 after_success:
-  - coveralls
+- coveralls
 notifications:
   email: false
+  slack:
+    secure: IoMrsx5OwvpFx8nUjjP91xl6olxF/u8hU9SPC0yXvFS7Y960L7Meh3WAAacvYiKxc2XqdqKCZqhkaQWCchQEa71S9r5wiR0UvB6iifJDgpXsFxVICqztV3pf7up9E2O7ER/KvkGUxllaNNlFxJHiEa+aOPniTnx3Fy/NFQ2tps7t7/nfKfZiO81sk45bjq0RGwgVQePs3cNhyPLW8y2LSCWoCRea3tM9kUSgDoXWw9lo7jFvpqOByMNsbxNCoZMFCHi4sJ4DV36FGj4J+kqUNRdJcr55p+tK/VufmcQ93Qmh1qRDY9bbbp6T7cMhkr8CZdQ/PrHyJTKcQ3+gWUBn0DUM/vhCEWp/UWvRi7Tj+xASR64L8KfdIS6PJhEL4asQYVf/y+w+T9Z8N/ifcf+4Hs2OQeCs+lCq1hocmLY6kU9aAkH6acS1rzi+T6cDpY1nGdb0oGJMpCHinKp8r/MTyVHvcpekwtzsoTM6DVB/Yp+VENN68mywVxFC19hJ6sza0cCAu4PsbEqn2PgTZpOEFvfui+XqQJxZlATNScCrdkLeb/hOFNgwObOqquEyT/GoweQRzqUNhzO++VBuUKBZhle4D3x7LmPQNDcl/41H23v3dQdpeMv+2/jZvlxRBooGQHDexaMxSxYLRohmP8sgOAjKjC500aA1SL0BDpIDUSA=
