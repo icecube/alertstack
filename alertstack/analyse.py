@@ -5,6 +5,8 @@ from tqdm import tqdm
 from alertstack.stats import GammaDistribution
 from datetime import datetime
 import logging
+import random
+from tqdm.contrib.concurrent import process_map
 
 
 class Analyse:
@@ -26,13 +28,13 @@ class Analyse:
 
         self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
-
-
     def save_path(self):
         self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return os.path.join(self.cache_dir, "{0}.pkl".format(self.pid))
 
-    def run_trial(self, injection_hypo=None, fraction=0.0):
+    def run_trial(self, injection_hypo=None, fraction=0.0, random_seed=None):
+
+        np.random.seed(random_seed)
 
         if fraction > 1.0:
             raise Exception("Fraction of correlated alerts cannot exceed 1.0!")
@@ -49,34 +51,30 @@ class Analyse:
 
         return res
 
-    def run_trials(self, injection_hypo_class=None, n_trials=100, fraction=0.0):
-        res = None
-        if injection_hypo_class is not None:
-            injection_hypo = injection_hypo_class(self.fixed_sources)
-        else:
-            injection_hypo = None
-        for _ in tqdm(range(n_trials)):
-            if res is None:
-                res = self.run_trial(injection_hypo, fraction=fraction)
-            else:
-                trial_res = self.run_trial(injection_hypo, fraction=fraction)
+    def run_trial_wrapper(self, p):
+        return self.run_trial(*p)
 
-                for key, val in trial_res.items():
-                    res[key] += val
+    def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, n_steps=10, **kwargs):
 
-        return res
+        fs = [0.0 for _ in range(n_trials * 10)]
+        for step in np.linspace(0.0, fraction, n_steps + 1)[1:]:
+            fs += [step for _ in range(n_trials)]
 
-    def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, nsteps=10):
-
-        steps = np.linspace(0.0, fraction, nsteps+1)[1:]
-
+        inputs = [(injection_hypo, x, int(random.random() * 10 ** 8)) for x in fs]
+        results = process_map(self.run_trial_wrapper, inputs, **kwargs)
         all_res = dict()
-        all_res[0.0] = self.run_trials(injection_hypo, n_trials*10, fraction=0.0)
 
-        if np.logical_and(injection_hypo is not None, fraction > 0.0):
-            for step in steps:
-            #for step in range(fraction): # step and fraction are going to be the number of injected neutrinos 
-                all_res[step] = self.run_trials(injection_hypo, n_trials, fraction=step)
+        # Combine results into nested dictionaries
+
+        for fraction in sorted(list(set(fs))):
+            mask = np.array(fs) == fraction
+            cut_results = np.array(results)[mask]
+            res_dict = cut_results[0]
+            for entry in cut_results[1:]:
+                for key, val in entry.items():
+                    res_dict[key] += val
+
+            all_res[fraction] = res_dict
 
         self.all_res = all_res
 
