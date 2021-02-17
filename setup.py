@@ -29,6 +29,7 @@ setuptools.setup(
         "scipy",
         "matplotlib",
         "astropy",
+        "coveralls"
     ],
     package_data={'alertstack': [
         'alertstack/data/*']},
