@@ -65,7 +65,7 @@ class Analyse:
         # Create input list and run multiprocessing
 
         inputs = [(injection_hypo(self.fixed_sources), x, int(random.random() * 10 ** 8)) for x in fs]
-        results = process_map(self.run_trial_wrapper, inputs, **kwargs)
+        results = process_map(self.run_trial_wrapper, inputs, chunksize=1, **kwargs)
         all_res = dict()
 
         # Combine results into nested dictionaries
