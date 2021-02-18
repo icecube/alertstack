@@ -16,12 +16,12 @@ expected_levels = [
 ]
 
 expected_res = [
-    [0.5, 0.0016, 0.0],
-    [0.908, 0.156, 0.002],
-    [0.972, 0.478, 0.066],
-    [0.998, 0.828, 0.24],
-    [1.0, 0.922, 0.514],
-    [1.0, 0.978, 0.718]
+    [0.5, 0.0016, 0.0, 10000],
+    [0.908, 0.156, 0.002, 1000],
+    [0.972, 0.478, 0.066, 1000],
+    [0.998, 0.828, 0.24, 1000],
+    [1.0, 0.922, 0.514, 1000],
+    [1.0, 0.978, 0.718, 1000]
 ]
 
 class TestFullChain(unittest.TestCase):
@@ -97,20 +97,17 @@ class TestFullChain(unittest.TestCase):
                     n_obs = float(len(val))
                     n_det = np.sum(val > thresh[key])
 
-                    exp = expected_res[i][j] * n_obs
+                    n_exp_found = expected_res[i][j] * expected_res[i][-1]
+                    exp = max(n_exp_found, 2.3) * n_obs / expected_res[i][-1]
 
                     chi2 = ((n_det - exp)**2.)/(exp + 1.)
 
-                    print(chi2, exp, n_det, exp**2., n_obs)
-
                     logging.debug(f"Fraction above {name}: {frac}")
-
-                    print(expected_res[i][j], frac, abs(expected_res[i][j] - frac) > 0.06)
 
                     reduced_chi2 += chi2
                     ndof += 1
 
-        print(f"Final {reduced_chi2}, {ndof}, {reduced_chi2/ndof}")
+        logging.info(f"Final chi2 per dof: {reduced_chi2/ndof}")
 
         self.assertLess(reduced_chi2/ndof, 1.2)
 
