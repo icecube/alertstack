@@ -18,8 +18,10 @@ and then look at examples to get an idea.
 
 To install locally:
 
-`git clone https://github.com/icecube/alertstack.git`
-`pip install -e alertstack/`
+```
+git clone https://github.com/icecube/alertstack.git
+pip install -e alertstack/
+```
 
 Pip installation with pypi will soon be supported too.
 
@@ -27,6 +29,8 @@ Pip installation with pypi will soon be supported too.
 
 *alertstack* runs both with published neutrino information or internal likelihood skymaps. Icecube Collaboration members can run:
 
-`export NU_SKYMAP_DIR=/path/to/healpix/files `
+```
+export NU_SKYMAP_DIR=/path/to/healpix/files 
+```
 
 to import and use Healpix files. 
