@@ -54,7 +54,21 @@ class Analyse:
     def run_trial_wrapper(self, p):
         return self.run_trial(*p)
 
-    def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, n_steps=10, **kwargs):
+    def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, n_steps=10,
+                    max_workers=min(32, os.cpu_count() + 4), chunksize=1,
+                    **kwargs):
+        """
+
+        :param injection_hypo: Injection Hypothesis object
+        :param n_trials: Number of trials to run for each injection strength. 10x this number
+        will be run as background trials
+        :param fraction: Maximum fraction of astrophysical neutrinos to be injected
+        :param n_steps: Number of different injection steps to test, between 0 and fraction.
+        :param max_workers: tqdm max_workers parameter, setting number of cpus to be used
+        :param chunksize: tqdm chunksize parameter, Size of chunks sent to worker processes
+        :param kwargs: Keyword args
+        :return:
+        """
 
         # Create list of fractions to loop over. Includes ten times as many background trials.
 
@@ -65,7 +79,7 @@ class Analyse:
         # Create input list and run multiprocessing
 
         inputs = [(injection_hypo(self.fixed_sources), x, int(random.random() * 10 ** 8)) for x in fs]
-        results = process_map(self.run_trial_wrapper, inputs, chunksize=1, **kwargs)
+        results = process_map(self.run_trial_wrapper, inputs, max_workers=max_workers, chunksize=chunksize)
         all_res = dict()
 
         # Combine results into nested dictionaries
