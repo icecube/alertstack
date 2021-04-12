@@ -16,7 +16,7 @@ if __name__ == "__main__":
         n_trials=500,
         injection_hypo=AverageFluxWeightHypothesis,
         fraction=0.5,
-        nsteps=10,
+        n_steps=10,
     )
 
     all_res = blazar_analysis.load_results()
