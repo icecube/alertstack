@@ -10,9 +10,9 @@ import unittest
 blazar_cache = os.path.join(os.path.dirname(__file__), "test_cache/")
 
 expected_levels = [
-    ('Background Median', {'average_flux_weight': 6.302686494522481}),
-    ('3 Sigma Discovery Potential', {'average_flux_weight': 17.877173064634526}),
-    ('5 Sigma Discovery Potential', {'average_flux_weight': 29.756258163220224})
+    ('Background Median', {'average_flux_weight': 5.633105350278122}),
+    ('3 Sigma Discovery Potential', {'average_flux_weight': 17.663312382632974}),
+    ('5 Sigma Discovery Potential', {'average_flux_weight': 30.49081935391434})
 ]
 
 expected_res = [
