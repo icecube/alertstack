@@ -19,6 +19,8 @@ class Analyse:
         for hypo in hypos:
             self.hypos[hypo.name] = hypo(fixed_sources)
 
+        self._injection_hypo = None
+
         if clean_cache:
             self.clean_cache()
 
@@ -32,7 +34,10 @@ class Analyse:
         self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return os.path.join(self.cache_dir, "{0}.pkl".format(self.pid))
 
-    def run_trial(self, injection_hypo=None, fraction=0.0, random_seed=None):
+    def set_injection_hypo(self, injection_hypo):
+        self._injection_hypo = injection_hypo(self.fixed_sources)
+
+    def run_trial(self, fraction=0.0, random_seed=None):
 
         np.random.seed(random_seed)
 
@@ -41,8 +46,8 @@ class Analyse:
 
         cat = self.base_cat.scramble()
 
-        if injection_hypo is not None:
-            cat = injection_hypo.inject_signal(cat=cat, fraction=fraction)
+        if self._injection_hypo is not None:
+            cat = self._injection_hypo.inject_signal(cat=cat, fraction=fraction)
 
         res = dict()
 
@@ -58,7 +63,6 @@ class Analyse:
                     max_workers=min(32, os.cpu_count() + 4), chunksize=1,
                     **kwargs):
         """
-
         :param injection_hypo: Injection Hypothesis object
         :param n_trials: Number of trials to run for each injection strength. 10x this number
         will be run as background trials
@@ -67,8 +71,9 @@ class Analyse:
         :param max_workers: tqdm max_workers parameter, setting number of cpus to be used
         :param chunksize: tqdm chunksize parameter, Size of chunks sent to worker processes
         :param kwargs: Keyword args
-        :return:
         """
+
+        self.set_injection_hypo(injection_hypo)
 
         # Create list of fractions to loop over. Includes ten times as many background trials.
 
@@ -78,7 +83,7 @@ class Analyse:
 
         # Create input list and run multiprocessing
 
-        inputs = [(injection_hypo(self.fixed_sources), x, int(random.random() * 10 ** 8)) for x in fs]
+        inputs = [(x, int(random.random() * 10 ** 8)) for x in fs]
         results = process_map(self.run_trial_wrapper, inputs, max_workers=max_workers, chunksize=chunksize)
         all_res = dict()
 
