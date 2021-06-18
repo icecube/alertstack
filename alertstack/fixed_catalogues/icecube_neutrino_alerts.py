@@ -69,7 +69,7 @@ class HealpixNeutrinoAlert(PointSource):
 
         try:
             self.weight = self.pkl_dict["SIGNAL"]
-            if type(self.weight)== str: # some neutrinos don't have signalness? just 2 or 3
+            if type(self.weight)== str:
                 self.weight = 0.5
         except KeyError:
             self.weight = 0.5
@@ -146,6 +146,7 @@ class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
         logging.info("Loading from {0}".format(skymap_dir))
 
         files = [x for x in os.listdir(skymap_dir) if ".pkl" in x]
+        files = sorted(files)
         for filename in files:
             path =  os.path.join(skymap_dir, filename)
             nu = HealpixNeutrinoAlert(path)

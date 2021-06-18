@@ -165,12 +165,12 @@ class Hypothesis:
         lh_array = 0.
         for i, source in enumerate(self.fixed_catalogue):
             spatial_pdf = source.eval_spatial_pdf(cat_data["ra_rad"], cat_data["dec_rad"]) * (4 * np.pi)
-            # this is too slow
+            
             spatial_pdf_mask = np.where(is_outside_GP(np.rad2deg(cat_data["ra_rad"]), np.rad2deg(cat_data["dec_rad"])) == False, 0.0, np.array(spatial_pdf)) # zero everything inside GP
 
             source_weight = self.source_weights[i]
 
-            prob = sum(source_weight * spatial_pdf * cat_weights / density) # instead of max 
+            prob = max(source_weight * spatial_pdf * cat_weights / density) 
 
             # print(prob)
             # input("?")

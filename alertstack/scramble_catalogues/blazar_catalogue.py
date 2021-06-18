@@ -26,6 +26,10 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         mask = np.array([x["CLASS"] in blazar_class for x in cat])
         blazars = np.array(cat[mask])
 
+        cut_e = -11.6
+        mask_e = np.array([x["Energy_Flux100"]>10**cut_e for x in blazars])
+        blazars = np.array(blazars[mask_e])
+        
         maps = [
             ("RAJ2000", "ra_rad"),
             ("DEJ2000", "dec_rad"),
