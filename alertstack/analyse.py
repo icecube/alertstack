@@ -81,10 +81,19 @@ class Analyse:
         for step in np.linspace(0.0, fraction, n_steps + 1)[1:]:
             fs += [step for _ in range(n_trials)]
 
-        # Create input list and run multiprocessing
+        # Create input list
 
         inputs = [(x, int(random.random() * 10 ** 8)) for x in fs]
-        results = process_map(self.run_trial_wrapper, inputs, max_workers=max_workers, chunksize=chunksize)
+
+        # Run multiprocessing if circularised neutrino alerts, regular loop otherwise
+ 
+        if 'Healpix' not in type(self.fixed_sources).__name__:
+            results = process_map(self.run_trial_wrapper, inputs, max_workers=max_workers, chunksize=chunksize)
+        else:
+            results = []
+            for i in tqdm(range(len(inputs))):
+                results.append(self.run_trial(inputs[i][0],inputs[i][1])) 
+
         all_res = dict()
 
         # Combine results into nested dictionaries
