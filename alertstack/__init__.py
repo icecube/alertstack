@@ -161,22 +161,24 @@ class Hypothesis:
     def calculate_llh(self, cat_data):
         cat_weights = self.weight_catalogue(cat_data)
         density = np.sum(cat_weights)# / (4 * np.pi)
+        #cat_weights = cat_data['s/b']
         # lh_array = np.zeros(len(cat_data))
         lh_array = 0.
         for i, source in enumerate(self.fixed_catalogue):
             spatial_pdf = source.eval_spatial_pdf(cat_data["ra_rad"], cat_data["dec_rad"]) * (4 * np.pi)
-            # this is too slow
-            spatial_pdf_mask = np.where(is_outside_GP(np.rad2deg(cat_data["ra_rad"]), np.rad2deg(cat_data["dec_rad"])) == False, 0.0, np.array(spatial_pdf)) # zero everything inside GP
+
+            spatial_pdf_mask = np.where(is_outside_GP(np.rad2deg(cat_data["ra_rad"]), np.rad2deg(cat_data["dec_rad"])) == False, 0.0, np.array(spatial_pdf))
 
             source_weight = self.source_weights[i]
 
-            prob = sum(source_weight * spatial_pdf * cat_weights / density) # instead of max 
-
+            prob = max(source_weight * spatial_pdf_mask * cat_weights / density)
+            if prob < 1.:
+                prob = 1.
             # print(prob)
             # input("?")
             #
             # if prob > 0:
-            lh_array += np.log(prob + 1.)
+            lh_array += np.log(prob)
 
         llh = lh_array# - np.log(np.sum(self.source_weights))
         return llh
