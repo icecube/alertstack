@@ -4,6 +4,7 @@ import os
 import logging
 from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
 from numpy.lib.recfunctions import rename_fields
+import pandas as pd
 
 class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
 
@@ -41,6 +42,16 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
 
         mask_GP = [is_outside_GP(blazars['ra_rad'][i],blazars['dec_rad'][i]) for i in range(len(blazars))]
         blazars = blazars[mask_GP] 
+        
+        ####################
+        fluxes = blazars['Energy_Flux100'].byteswap().newbyteorder()
+        blazar_df = pd.DataFrame({'flux': fluxes})
+        blazar_df['bins'] = pd.cut(blazar_df['flux'],50)
+        blazar_df2 = blazar_df.groupby('bins').agg({'flux': sum, 'bins': 'count'}).rename(columns = {'bins': 'count', 'flux':'background'}).reset_index()
+        blazar_df2['flux2'] = (len(blazars)/sum(blazar_df2['background']))*blazar_df2['background']
+        blazar_df2['s/b'] = blazar_df2['flux2']/(blazar_df2['count'])
+        blazar_df = blazar_df.merge(blazar_df2,how='left',on='bins')
+        blazars = np.lib.recfunctions.append_fields(blazars, 's/b', blazar_df['s/b'].values)
 
         logging.info("Found {0} sources in total".format(len(blazars)))
 
