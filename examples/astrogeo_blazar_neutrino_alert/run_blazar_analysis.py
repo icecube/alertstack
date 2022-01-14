@@ -3,6 +3,7 @@ import os
 import logging
 import argparse
 from scipy import interpolate
+from scipy.optimize import bisect
 from alertstack.analyse import Analyse
 from alertstack.scramble_catalogues.blazar_catalogue import AstrogeoBlazarCatalogue, AverageFluxWeightHypothesis,\
     BrightestFluxWeightHypothesis
@@ -81,17 +82,19 @@ if __name__ == "__main__":
     f3 = interpolate.interp1d(fracs, sig5, kind='cubic')
 
     tmp = [i.weight for i in blazar_analysis.fixed_sources]
-    avg_signalness = np.mean(tmp) # v2 catalog # calculate this here directly
-    n_events = len(tmp) # v2 catalog
-    print("\n##### Calculate sensitivity and discovery potential with {0} neutrino alerts (average signalness: {1:.1f} %) ######\n".format(n_events, 100*avg_signalness))
+    avg_signalness = np.mean(tmp)
+    n_events = len(tmp)
 
-    for x in np.arange(0, args.fraction, 0.001): 
-        if abs(f1(x)-0.9)<0.01 :
-            print("Sensitivity at {0} of flux, expectation of {1:.2f}/{2} = {3:.2f}".format(
-                x,(x*avg_signalness)*n_events,n_events,(x*avg_signalness)))
-        if abs(f2(x)-0.5)<0.01 :
-            print("3 Sigma discovery at {0} of flux, expectation of {1:.2f}/{2} = {3:.2f}".format(
-                x,(x*avg_signalness)*n_events,n_events,(x*avg_signalness)))
-        if abs(f3(x)-0.5)<0.005 : 
-            print("5 Sigma discovery at {0} of flux, expectation of {1:.2f}/{2} = {3:.2f}".format(
-                x,(x*avg_signalness)*n_events,n_events,(x*avg_signalness)))
+    print("\n------- Sensitivity and discovery potential with {0} neutrino alerts (average signalness: {1:.1f} %) --------\n".format(n_events, 100*avg_signalness))
+
+    x1 = bisect(lambda x: f1(x)-0.9, 0, 0.5, xtol=1e-6)
+    x2 = bisect(lambda x: f2(x)-0.5, 0, 0.5, xtol=1e-6)
+    x3 = bisect(lambda x: f3(x)-0.5, 0, 0.5, xtol=1e-6)
+
+    print("Sensitivity at {0:.3f} of flux, expectation of {1:.1f}/{2} = {3:.2f}".format(
+                x1,(x1*avg_signalness)*n_events,n_events,(x1*avg_signalness)))
+    print("3 Sigma discovery at {0:.3f} of flux, expectation of {1:.1f}/{2} = {3:.2f}".format(
+                x2,(x2*avg_signalness)*n_events,n_events,(x2*avg_signalness)))
+    print("5 Sigma discovery at {0:.3f} of flux, expectation of {1:.1f}/{2} = {3:.2f}".format(
+                x3,(x3*avg_signalness)*n_events,n_events,(x3*avg_signalness)))
+    print("\n----------------------------------------------------------------------------------------------------------\n")
