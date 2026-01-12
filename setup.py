@@ -29,6 +29,7 @@ setuptools.setup(
         "scipy",
         "matplotlib",
         "astropy",
+        "pandas",
         "coveralls",
         "tqdm>=4.42.0"
     ],
