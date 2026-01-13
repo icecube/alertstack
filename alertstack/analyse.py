@@ -8,16 +8,22 @@ import logging
 import random
 from tqdm.contrib.concurrent import process_map
 
+import time
+
 
 class Analyse:
 
-    def __init__(self, cat, hypos, fixed_sources, cache_dir, clean_cache=False):
+    def __init__(self, cat, hypos, fixed_sources, cache_dir, min_E = 0, clean_cache=False):
         self.base_cat = cat
         self.fixed_sources = fixed_sources
         self.cache_dir = cache_dir
         self.hypos = dict()
+        self.min_E = min_E
         for hypo in hypos:
-            self.hypos[hypo.name] = hypo(fixed_sources)
+            self.hypos[hypo.name] = hypo(fixed_sources, min_E)
+        if len(hypos) == 1:
+            # The fixed catalogue may change depending on the hypothesis
+            self.fixed_sources = self.hypos[hypo.name].fixed_catalogue
 
         self._injection_hypo = None
 
@@ -34,25 +40,44 @@ class Analyse:
         self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return os.path.join(self.cache_dir, "{0}.pkl".format(self.pid))
 
-    def set_injection_hypo(self, injection_hypo):
-        self._injection_hypo = injection_hypo(self.fixed_sources)
+    def set_injection_hypo(self, injection_hypo, min_E=0):
+        self._injection_hypo = injection_hypo(self.fixed_sources, min_E)
 
     def run_trial(self, fraction=0.0, random_seed=None):
+        '''
+        Run individual trial. This function scrambles the catalog sources, injects the 
+        correlations and calculates the TS of the trial. Returns a dictionary with the 
+        results.
+        '''
+
+        # t0 = time.time()
 
         np.random.seed(random_seed)
-
+        
         if fraction > 1.0:
             raise Exception("Fraction of correlated alerts cannot exceed 1.0!")
 
         cat = self.base_cat.scramble()
+        # print(bkg_pdf_per_source)
+        
+        # t1 = time.time()
+        # print(f"Scramble performed in: {t1-t0} s")
 
         if self._injection_hypo is not None:
             cat = self._injection_hypo.inject_signal(cat=cat, fraction=fraction)
 
+        #t2 = time.time()
+        #print(f"Injection performed in: {t2-t1} s")
+
         res = dict()
 
         for name, hypo in self.hypos.items():
-            res[name] = [hypo.calculate_llh(cat)]
+            res[name] = [hypo.calculate_llh(
+                cat, gp_threshold=self.base_cat.gp_threshold
+            )]
+
+        #t3 = time.time()
+        #print(f"Llh calculated in: {t3-t2} s")
 
         return res
 
@@ -62,7 +87,11 @@ class Analyse:
     def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, n_steps=10,
                     max_workers=min(32, os.cpu_count() + 4), chunksize=1,
                     **kwargs):
-        """
+        '''
+        Run the analysis. It creates the list of trials based on the input parameters. 
+        It calls the run_trial function and parses the fraction of astrophysical neutrinos to inject.  
+        ------------------------
+        Parameters:
         :param injection_hypo: Injection Hypothesis object
         :param n_trials: Number of trials to run for each injection strength. 10x this number
         will be run as background trials
@@ -71,7 +100,7 @@ class Analyse:
         :param max_workers: tqdm max_workers parameter, setting number of cpus to be used
         :param chunksize: tqdm chunksize parameter, Size of chunks sent to worker processes
         :param kwargs: Keyword args
-        """
+        '''
 
         self.set_injection_hypo(injection_hypo)
 
@@ -150,13 +179,16 @@ class Analyse:
     def find_cache_files(self):
         return [os.path.join(self.cache_dir, x) for x in os.listdir(self.cache_dir) if ".pkl" in x]
 
-    def load_results(self):
+    def load_results(self, filename=None):
 
         self.all_res = dict()
 
-        list_of_files = self.find_cache_files()
-        latest_file = max(list_of_files, key=os.path.getctime)
-        #for file in self.find_cache_files():
+        if filename is None:
+            list_of_files = self.find_cache_files()
+            latest_file = max(list_of_files, key=os.path.getctime)
+        else:
+            latest_file = os.path.join(self.cache_dir, filename)
+
         with open(latest_file, "rb") as f:
             cache_dict = pickle.load(f)
             self.all_res = self.combine_res_dicts(self.all_res, cache_dict)
