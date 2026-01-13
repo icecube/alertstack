@@ -1,16 +1,19 @@
 import numpy as np
 import healpy as hp
-from scipy.stats import norm
 import random
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import os
+import pickle
+import copy
+
+import time
 
 alertstack_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/")
 
 cat_dtype = np.dtype([
-    ("Ra", np.float),
-    ("Dec", np.float)
+    ("Ra", float),
+    ("Dec", float)
 ])
 
 
@@ -61,11 +64,109 @@ class Catalogue:
 
     def __init__(self):
         self.data = self.parse_data()
+        self.gp_threshold = self.set_gp_threshold()
+        self.min_declination = self.set_min_declination()
+        self.nside = self.set_nside()
+        self.npix = self.set_npix()
+        self.numap_nside = 1024
+        self.numap_npix = hp.nside2npix(self.numap_nside)
+        self.bkg_distribution = self.set_bkg_distribution()
+        self.set_bkg_pdf_per_source(self.data)
 
     @staticmethod
     def parse_data():
         return NotImplementedError
 
+    @staticmethod
+    def set_gp_threshold():
+        return NotImplementedError
+
+    @staticmethod
+    def set_min_declination():
+        return NotImplementedError
+
+    @staticmethod
+    def set_nside():
+        return NotImplementedError
+
+    @staticmethod
+    def generate_bkg_distribution_allsky(
+        cat, nside, hd_nside=128, sigma_smoothing=15.,
+    ):
+        """
+        Given the coordinates of the sources, it returns an all-sky
+        probability map.
+    
+        :param catalog: catalog with info regarding coordinates
+        :param nside: nside for healpix histogramming of sources
+        :param hd_nside: up to which nside the map must be upgraded
+        :param sigma_smoothing [deg]: smoothing to apply to the 
+        healpix histogram
+        :return: the healpix map with the probabilities
+        """
+
+        theta = np.pi/2. - cat["dec_rad"].to_numpy()
+        phi = cat["ra_rad"].to_numpy()
+        
+        bins_per_source = hp.ang2pix(nside, theta, phi)
+        bins = np.arange(hp.nside2npix(nside)+1)
+        counts_per_bin, _ = np.histogram(bins_per_source, bins=bins)
+        bins_probs = counts_per_bin/np.sum(counts_per_bin)
+        bins_probs = hp.ud_grade(bins_probs, hd_nside)
+        bins_probs = bins_probs / np.sum(bins_probs)
+        bins_probs = hp.sphtfunc.smoothing(
+            bins_probs, sigma=sigma_smoothing*np.pi/180.
+        )
+        bins_probs[bins_probs<0.] = 0.
+        bins_probs = bins_probs / np.sum(bins_probs)
+        return bins_probs
+
+    @staticmethod
+    def apply_cuts_on_bkg_distribution(
+        bins_probs, min_declination=-25, gp_threshold=8.
+    ):
+        """
+        Upgrades the map resolution and applies the necessary cuts.
+    
+        :param bins_probs: the initial healpix map (an array)
+        :param min_theta [deg]: lower cut on declination
+        :param max_gal_lat [deg]: exclude the galactic plane up to this
+        latitude
+        :return: upgraded map with cuts applied
+        """
+
+        hd_npix = len(bins_probs)
+        hd_nside = hp.npix2nside(hd_npix)
+        hd_cothetas, hd_phis = hp.pix2ang(
+            hd_nside, np.arange(hd_npix)
+        )
+        hd_thetas = np.pi/2. - hd_cothetas
+        low_theta_mask = hd_thetas < min_declination * np.pi / 180.
+        hd_icrs = SkyCoord(
+            ra=hd_phis*u.rad,
+            dec=hd_thetas*u.rad,
+            frame='icrs',
+            unit='rad',
+        )
+        hd_bs = hd_icrs.galactic.b.deg
+        galactic_mask = np.abs(hd_bs) < gp_threshold
+        
+        bins_probs[low_theta_mask | galactic_mask] = 0.
+        bins_probs = bins_probs / np.sum(bins_probs)
+    
+        return bins_probs
+
+    def set_npix(self):
+        return NotImplementedError
+
+    def bkg_spatial_pdf(self, ra, dec):
+        return NotImplementedError
+
+    def set_bkg_distribution(self):
+        return NotImplementedError
+
+    def set_bkg_pdf_per_source(self, cat):
+        return NotImplementedError
 
 class FixedCatalogue(Catalogue):
 
@@ -98,143 +199,238 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
 
     def __init__(self, nside=1024):
         ScrambleCatalogue.__init__(self)
-        # self.nside = nside
-        # print("NSIDE = {0}, Max Pixel Radius = {1} deg".format(nside, np.degrees(hp.max_pixrad(nside))))
-        # self.cone_ids = [x for x in range(hp.nside2npix(self.nside)) if x not in gal_plane_1024]
 
-    def scramble_positions(self):
+    def scramble_positions_outside_GP(self, gp_cut=10., min_dec_deg=-90.):
+        # Scramble positions directly outside the galactic plane
 
-        # scramble positions directly outside the galactic plane
-        gal_l_vals = np.random.uniform(low=0, high=2*np.pi, size=len(self.data))
-     
-        # divide the sky into two areas, half of the blazars in each side
-        threshold = np.deg2rad(10) # 10 degrees 
-        size_half = int(len(self.data) / 2)
+        def perform_scramble_outside_GP(data=self.data):
+            
+            gal_l_vals = np.random.uniform(low=0, high=2*np.pi, size=len(data))
+         
+            # divide the sky into two areas, half of the blazars on each side
+            threshold = np.deg2rad(gp_cut) # 10 degrees 
+            size_half = int(len(data) / 2)
+    
+            gal_b_vals_up = np.arccos(
+                2*np.random.uniform(
+                    low=0,high=0.5*(1-np.sin(threshold)),size=size_half
+                )-1
+            ) - np.pi/2.
+            gal_b_vals_down = np.arccos(
+                2 * np.random.uniform(
+                    low=0.5*(1+np.sin(threshold)),
+                    high=1,
+                    size=(len(data) - size_half)
+                ) - 1
+            ) - np.pi / 2.
+            gal_b_vals = np.concatenate(
+                (gal_b_vals_down,gal_b_vals_up),axis=0
+            )
+            np.random.shuffle(gal_b_vals)
+    
+            gal = SkyCoord(
+                l = gal_l_vals*u.rad, b = gal_b_vals*u.rad, frame='galactic'
+            )
+            ra_vals = gal.icrs.ra.rad
+            dec_vals = gal.icrs.dec.rad
 
-        gal_b_vals_up = np.arccos(2*np.random.uniform(low=0,high=0.5*(1-np.sin(threshold)),size=size_half)-1) - np.pi/2.
-        gal_b_vals_down = np.arccos(2 * np.random.uniform(low=0.5*(1+np.sin(threshold)), high=1, size=(len(self.data) - size_half)) - 1) - np.pi / 2.
-        gal_b_vals = np.concatenate((gal_b_vals_down,gal_b_vals_up),axis=0)
+            return ra_vals, dec_vals
 
-        gal = SkyCoord(l = gal_l_vals*u.rad, b = gal_b_vals*u.rad,frame='galactic')
-        ra_vals = gal.icrs.ra.rad
-        dec_vals = gal.icrs.dec.rad 
+        ra_vals, dec_vals = perform_scramble_outside_GP()
+        too_low_mask = dec_vals * 180. / np.pi < min_dec_deg
+
+        while np.sum(too_low_mask) > 0:
+            # repeat scramble only for sources too low in declination
+            (
+                ra_vals[too_low_mask], dec_vals[too_low_mask]
+            ) = perform_scramble_outside_GP(self.data[too_low_mask])
+            too_low_mask = dec_vals * 180. / np.pi < min_dec_deg
         
-        #ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
-        #dec_vals = np.arccos(2.*np.random.uniform(size=len(self.data)) - 1) - np.pi/2.
 
         return ra_vals, dec_vals
-        # indexes = np.random.choice(len(self.cone_ids), size=len(self.data))
-        # return self.extract_ra_dec(self.nside, indexes)
+    
+    def scramble_positions(self, min_dec=-90.):
+        # Scramble positions
+        
+        ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
+        min_dec_rad = min_dec * np.pi / 180.
+        dec_vals = np.arccos(
+            (
+                1-np.sin(min_dec_rad)
+            )*np.random.uniform(size=len(self.data)) + np.sin(min_dec_rad)
+        ) - np.pi/2.
+        return ra_vals, dec_vals
 
-    #
-    # OLD VERSION
-    #
-    # def scramble_positions(self):
-    #
-    #     ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
-    #     dec_vals = np.arccos(2.*np.random.uniform(size=len(self.data)) - 1) - np.pi/2.
-    #     return ra_vals, dec_vals
 
-
-def is_outside_GP(ra,dec):  
+def is_outside_GP(ra,dec, threshold=10.0):
+    # Check if a position in the sky (in degrees) is outside of the galactic plane
 
     eq = SkyCoord(ra*u.deg, dec*u.deg, frame='icrs')
     gal = eq.galactic
-
-    threshold_GP = 10.0*u.deg
+    threshold_GP = threshold*u.deg
 
     return abs(gal.b) > threshold_GP
 
 class Hypothesis:
     name = None
 
-    def __init__(self, fixed_catalogue):
+    def __init__(self, fixed_catalogue, min_E=0.):
+    #  min_E added to test minimum sensitive energy
         self.fixed_catalogue = fixed_catalogue
+
+        nu_energies = np.array([nu.energy for nu in fixed_catalogue])
+        energymask = nu_energies >= min_E
+        
+        
+        if self.name == 'strength_flux_weight':
+            # Select only neutrinos which can be coincident with the 63 accretion flares
+            nutimes = np.array(
+                [nu.time_mjd for nu in fixed_catalogue]
+            )
+            nudecs = np.array(
+                [nu.dec_deg for nu in fixed_catalogue]
+            )
+            nudecsplus = np.array(
+                [nu.header["DEC_ERR_PLUS_90"] for nu in fixed_catalogue]
+            )
+            nutimes = np.array(nutimes)
+            minflarestime = 58261.4
+            maxflarestime = 58978.3 + 365.
+            timemask = (
+                (nutimes >= minflarestime) & (nutimes <= maxflarestime)
+            )
+            spatialmask = (nudecs + nudecsplus) > -25.
+            self.fixed_catalogue = np.array(fixed_catalogue.data)[timemask & spatialmask & energymask]
+            #selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
+            #selected_nus.sort()
+            #for i, nu in enumerate(selected_nus):
+            #    print(i, nu)
+        elif self.name == 'bolometric_fluence_weight':
+            # Select only neutrinos that can be coincident with the 528 accretion flares
+            nutimes = np.array(
+                [nu.time_mjd for nu in fixed_catalogue]
+            )
+            nutimes = np.array(nutimes)
+            minflarestime = 55465.79 - 365.
+            maxflarestime = 59747.02
+            timemask = (
+                (nutimes >= minflarestime) & (nutimes <= maxflarestime)
+            )
+            self.fixed_catalogue = np.array(fixed_catalogue.data)[timemask & energymask]
+            #selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
+            #selected_nus.sort()
+            #for i, nu in enumerate(selected_nus):
+            #    print(i, nu)
+        else:
+            self.fixed_catalogue = np.array(fixed_catalogue.data)[energymask]
+            
         self.source_weights = np.array([source.eval_source_weight() for source in self.fixed_catalogue])
-        # self.source_weights /= np.mean(self.source_weights)
 
     @staticmethod
     def weight_catalogue(cat_data):
         return NotImplementedError
 
     
-    def calculate_llh(self, cat_data):
-        cat_weights = self.weight_catalogue(cat_data)
-        density = np.sum(cat_weights)# / (4 * np.pi)
-        #cat_weights = cat_data['s/b']
-        # lh_array = np.zeros(len(cat_data))
+    def calculate_llh(self, cat_data, savedata=None, gp_threshold=10.0):
+        '''
+        Calculate the TS_i of each neutrino as TS_i = log(S/B), where S = max(S_spatial * signalness * w_blazar) 
+        and B = B_spatial. If the neutrino is in the Galactic Plane or TS_i < 0, then TS_i = 0 (S/B = 1, 
+        choose background hypothesis). The final TS of the trial is simply TS = sum(TS_i).
+        '''
+            
+        cat_mask  = is_outside_GP(
+            np.array(np.rad2deg(cat_data["ra_rad"])),
+            np.array(np.rad2deg(cat_data["dec_rad"])),
+            threshold = gp_threshold,
+        ) == False
+
+        if savedata is not None:
+            final = []
+
+        if (
+            (self.name != 'monthly_flux_weight') and 
+            (self.name != 'strength_flux_weight') and
+            (self.name != 'bolometric_fluence_weight')
+        ):
+            cat_weights = self.weight_catalogue(cat_data) # w_blazars
+            density = np.sum(cat_weights)
+
         lh_array = 0.
-        for i, source in enumerate(self.fixed_catalogue):
-            spatial_pdf = source.eval_spatial_pdf(cat_data["ra_rad"], cat_data["dec_rad"]) * (4 * np.pi)
 
-            spatial_pdf_mask = np.where(is_outside_GP(np.rad2deg(cat_data["ra_rad"]), np.rad2deg(cat_data["dec_rad"])) == False, 0.0, np.array(spatial_pdf))
+        for i, source in enumerate(self.fixed_catalogue): # loop over neutrinos
+            
+            max_dist = 4 * source.max_err * np.pi/180.
+            
+            s_ra, s_de = source.ra_rad, source.dec_rad
+            corads = copy.copy(cat_data["ra_rad"]) - s_ra + np.pi
+            corads %= 2*np.pi
 
-            source_weight = self.source_weights[i]
+            dist_mask = np.logical_and(
+                np.abs(s_de - cat_data["dec_rad"]) < max_dist,
+                np.abs(corads - np.pi) < max_dist
+            )
+            
+            spatial_pdf = np.zeros(len(cat_data["dec_rad"]))
 
-            prob = max(source_weight * spatial_pdf_mask * cat_weights / density)
+            spatial_pdf[dist_mask] = source.eval_spatial_pdf(
+                cat_data["ra_rad"][dist_mask],
+                cat_data["dec_rad"][dist_mask]
+            ) / cat_data["bkg_pdf"][dist_mask] # * (4 * np.pi)
+
+
+            if self.name != 'average_radio_flux_weight':
+                spatial_pdf_mask = np.where(
+                    cat_mask,
+                    0.0,
+                    np.array(spatial_pdf)
+                ) # if the neutrino is in the GP, TS_i = 0
+            else:
+                spatial_pdf_mask = spatial_pdf # don't need to mask the GP for the radio catalog
+
+
+            source_weight = self.source_weights[i] # signalness
+
+
+            if (
+                (self.name == 'monthly_flux_weight') or 
+                (self.name == 'strength_flux_weight') or
+                (self.name == 'bolometric_fluence_weight')
+            ):
+                cat_weights = self.weight_catalogue(cat_data, source.time_mjd) # w_blazars
+                density = np.sum(cat_weights)
+
+            if density == 0.:
+                prob = 1.
+            else:
+                prob = max(source_weight * spatial_pdf_mask * cat_weights / density) # S/B
             if prob < 1.:
                 prob = 1.
-            # print(prob)
-            # input("?")
-            #
-            # if prob > 0:
-            lh_array += np.log(prob)
 
-        llh = lh_array# - np.log(np.sum(self.source_weights))
+            lh_array += np.log(prob) # TS = log(S/B)
+            
+            if savedata is not None:
+                ind = np.argmax(source_weight * spatial_pdf_mask * cat_weights / density)
+                final.append([source.pkl_path, cat_data[ind]['Source_Name'], np.log(prob)])
+            
+        if savedata is not None:
+            with open(os.path.join(savedata,"correlations.pkl"), "wb") as fp:
+                pickle.dump(final, fp)
+
+        llh = lh_array
         return llh
 
-    #
-    # OLD VERSION
-    #
-    # def calculate_llh(self, cat_data):
-    #     cat_weights = self.weight_catalogue(cat_data)
-    #     density = np.sum(cat_weights)# / (4 * np.pi)
-    #     # lh_array = np.zeros(len(cat_data))
-    #     lh_array = 0.
-    #     for i, source in enumerate(self.fixed_catalogue):
-    #         spatial_pdf = source.eval_spatial_pdf(cat_data["ra_rad"], cat_data["dec_rad"]) * (4 * np.pi)
-    #         p_sig = self.source_weights[i]
-    #         p_bkg = 1. - p_sig
-    #
-    #         product = spatial_pdf * cat_weights
-    #         # sig_hypo = p_sig * (sum(product) - max(product)) + p_bkg
-    #         # bkg_hypo = p_sig * sum(product) + p_bkg
-    #         sig_hypo = (sum(product) - max(product))
-    #         bkg_hypo = sum(product)
-    #         if bkg_hypo > 0.:
-    #             ratio = sig_hypo/bkg_hypo
-    #         else:
-    #             ratio = 1.
-    #
-    #         hyp_ratio = ((p_sig * (1. - ratio)) + (1. - p_sig))
-    #
-    #         print(hyp_ratio, ratio, 1-ratio)
-    #
-    #         input("?")
-    #
-    #         # print(sig_hypo, bkg_hypo, sig_hypo/bkg_hypo)
-    #         #
-    #         # input("??")
-    #
-    #         # prob = max(source_weight * spatial_pdf * cat_weights / density)
-    #
-    #         # print(prob)
-    #         # input("?")
-    #         #
-    #         # if prob > 0:
-    #         lh_array += 2 * np.log(ratio)
-    #
-    #     llh = lh_array# - np.log(np.sum(self.source_weights))
-    #     return llh
 
     def inject_signal(self, cat, fraction):
+        '''
+        Create signal trials by injecting correlations between neutrino alerts and the catalog sources.
+        '''
 
-        n_exp = fraction * np.sum(self.source_weights)
-        n_inj = np.random.poisson(n_exp)
-        #n_inj = fraction
 
-        # print("Expectation of {0}, injecting {1}".format(n_exp, n_inj))
-        # input('?')
+        nucat = self.fixed_catalogue
+
+        
+        n_exp = fraction * np.sum(np.array(self.source_weights)) # Choose expected number of neutrinos (astrophysical or not) to have correlations
+        n_inj = np.random.poisson(n_exp) # Get number of neutrinos with correlations (poisson fluctuation)
 
         if n_inj > len(cat):
             raise Exception("Trying to inject more sources than there are entries in the catalogue! \n"
@@ -245,110 +441,63 @@ class Hypothesis:
 
         if n_inj > 0:
 
-            # Choose which fixed source will have a counterpart
-            ind = np.random.choice(len(self.source_weights), size=n_inj, p=self.source_weights/np.sum(self.source_weights)) 
-            while len(ind) != len(set(ind)):
-                ind = np.random.choice(len(self.source_weights), size=n_inj, p=self.source_weights/np.sum(self.source_weights))
-
+            # Choose which neutrinos will have a counterpart (each neutrino can only be injected once in each trial)
+            ind = np.random.choice(
+                len(np.array(self.source_weights)),
+                size=n_inj, 
+                p=np.array(self.source_weights)/np.sum(np.array(self.source_weights)),
+                replace=False
+            )
+            
             inj_cat = []
 
             inj_sources = []
 
             for i in ind:
-                fixed_source = self.fixed_catalogue[i]
-
-                mask = np.array([k not in inj_sources for k, _ in enumerate(cat)])
+                fixed_source = np.array(self.fixed_catalogue.data)[i]
 
                 # Choose which counterpart, according to the weighting scheme
-                weights = self.weight_catalogue(cat[mask])
+                if (
+                    (self.name == 'monthly_flux_weight') or 
+                    (self.name == 'strength_flux_weight') or
+                    (self.name == 'bolometric_fluence_weight')
+                ):
+                    weights = self.weight_catalogue(
+                        cat,
+                        fixed_source.time_mjd,
+                        ignore_times=True,
+                    )
+                else:
+                    weights = self.weight_catalogue(cat)
                 weights /= np.sum(weights)
+
+                source_names = cat['Source_Name'].to_numpy()
+
+                # Mask already chosen sources
                 j = np.random.choice(len(weights), p=weights)
-                inj_sources.append(j)
+                while source_names[j] in inj_sources:
+                    j = np.random.choice(len(weights), p=weights)
+                        
+                inj_sources.append(source_names[j])
 
-                # Simulate new source position, and remove from catalogue
+                # Simulate new source position
+                fixed_source.probs = fixed_source.probs/ np.sum(fixed_source.probs)
+                cat.at[j, 'ra_rad'], cat.at[j, 'dec_rad'] = fixed_source.simulate_position()
 
-                #cat_obj = cat[mask][j].copy()
-                
-                # for some events sum(self.probs) was slightly dif than 1 (has to be 10e-8 max)
-                try:
-                    cat[j]["ra_rad"], cat[j]["dec_rad"] = fixed_source.simulate_position()
-                except:
-                    fixed_source.probs = fixed_source.probs / sum(fixed_source.probs)
-                    cat[j]["ra_rad"], cat[j]["dec_rad"] = fixed_source.simulate_position()
-
-                # print(fixed_source.eval_spatial_pdf(cat_obj["ra_rad"], cat_obj["dec_rad"]))
-                # input("?")
-
-                #cat = np.delete(cat, j)
-                #inj_cat.append(cat_obj)
-
-            #inj_cat = np.array(inj_cat, dtype=cat.dtype)
-
-            # print(np.sum(inj_cat["Flux1000"]))
-            # input("?")
-
-            #cat = np.append(cat, inj_cat)
+                # Change the date so that it is coincident with the neutrino
+                if (
+                    (self.name == 'strength_flux_weight')
+                ):
+                    new_time = fixed_source.time_mjd - np.random.random()*365.
+                    cat.at[j, 't-peak'] = new_time
+                elif (
+                    (self.name == 'bolometric_fluence_weight')
+                ):
+                    new_time = fixed_source.time_mjd + np.random.random()*365.
+                    cat.at[j, 't-peak'] = new_time
+                    
 
         return cat
-
-    #
-    # OLD VERSION
-    #
-    # def inject_signal(self, cat, fraction):
-    #
-    #     n_exp = fraction * np.sum(self.source_weights)
-    #     n_inj = np.random.poisson(n_exp)
-    #
-    #     # print("Expectation of {0}, injecting {1}".format(n_exp, n_inj))
-    #     # input('?')
-    #
-    #     if n_inj > len(cat):
-    #         raise Exception("Trying to inject more sources than there are entries in the catalogue! \n"
-    #                         "There are {0} entries in the catalogue, and the expectation for injection is {1}. \n"
-    #                         "`Applying random poisson noise, we are trying to inject {2} this trial".format(
-    #             len(cat), n_exp, n_inj
-    #         ))
-    #
-    #     if n_inj > 0:
-    #
-    #         # Choose which fixed source will have a counterpart
-    #         ind = np.random.choice(len(self.source_weights), size=n_inj,
-    #                               p=self.source_weights/np.sum(self.source_weights))
-    #
-    #         inj_cat = []
-    #
-    #         inj_sources = []
-    #
-    #         for i in ind:
-    #             fixed_source = self.fixed_catalogue[i]
-    #
-    #             mask = np.array([k not in inj_sources for k, _ in enumerate(cat)])
-    #
-    #             # Choose which counterpart, according to the weighting scheme
-    #             weights = self.weight_catalogue(cat[mask])
-    #             weights /= np.sum(weights)
-    #             j = np.random.choice(len(weights), p=weights)
-    #             inj_sources.append(j)
-    #
-    #             # Simulate new source position, and remove from catalogue
-    #
-    #             cat_obj = cat[mask][j].copy()
-    #             cat_obj["ra_rad"], cat_obj["dec_rad"] = fixed_source.simulate_position()
-    #
-    #             # print(fixed_source.eval_spatial_pdf(cat_obj["ra_rad"], cat_obj["dec_rad"]))
-    #             # input("?")
-    #
-    #             cat = np.delete(cat, j)
-    #             inj_cat.append(cat_obj)
-    #
-    #         inj_cat = np.array(inj_cat, dtype=cat.dtype)
-    #
-    #         # print(np.sum(inj_cat["Flux1000"]))
-    #         # input("?")
-    #
-    #         cat = np.append(cat, inj_cat)
-    #
-    #     return cat
 
 
 class UniformPriorHypothesis(Hypothesis):
