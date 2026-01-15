@@ -26,12 +26,14 @@ setuptools.setup(
     install_requires=[
         "numpy>=1.17.0",
         "healpy",
+        "mhealpy",
         "scipy",
         "matplotlib",
         "astropy",
         "pandas",
         "coveralls",
-        "tqdm>=4.42.0"
+        "tqdm>=4.42.0",
+        "hellolancel @ git+https://github.com/sjoertvv/HelloLancel.git@main",
     ],
     package_data={'alertstack': [
         'alertstack/data/*']},
