@@ -155,12 +155,16 @@ class Analyse:
 
         return dict_b
 
-    def dump_results(self):
+    def dump_results(self, additional_tag=""):
 
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 
-        savepath = self.save_path()
+        savepath = (
+            f"{self.save_path().split("/2")[0]}/"
+            f"{additional_tag}{self.save_path().split("/")[-1]}"
+        )
+        print(savepath)
         if os.path.isfile(savepath):
             cache_results = self.load_cache()
             self.all_res = self.combine_res_dicts(cache_results, self.all_res)
