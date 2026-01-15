@@ -54,6 +54,7 @@ class FlairesCatalogue(IsotropicExtragalacticCatalogue):
             't-peak',
             flaires_df["PeakTime"].to_numpy()*(1+flaires_df["z"].to_numpy())+flaires_df["RefTime"].to_numpy()
         )
+        flaires_df.insert(len(names)+3, 'bkg_pdf', np.empty(len(flaires_df)))
 
         # Select the same sources as in Flairestack.
         # Exclude all sources without a bolometric luminosity.
