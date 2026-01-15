@@ -57,18 +57,25 @@ The requirements to run the code are the following:
     python >= 3.7,
     numpy >= 1.17.0,
     healpy,
+    mhealpy,
     scipy,
     matplotlib,
     astropy,
     pandas,
     coveralls,
-    tqdm >= 4.42.0
+    tqdm >= 4.42.0,
+    "hellolancel @ git+https://github.com/sjoertvv/HelloLancel.git@main",
 ```
 
 All of the necessary packages will be installed if you run the following command to install *alertstack* locally:
 
 ```
-pip install -e 2022_Fermi_Blazar_Alerts_Stacking/
+python3.12 -m venv alertstack-venv
+source alertstack-venv/bin/activate
+pip install "numpy<2"
+pip install -U pip setuptools wheel
+pip install https://github.com/pschella/k3match/archive/51a49a83d36bd5289bcd1c03296cf20531b4c924.zip --no-build-isolation
+pip install -e alertstack/ --no-build-isolation
 ```
 
 ## Use full skymaps
