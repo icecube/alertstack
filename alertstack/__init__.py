@@ -160,7 +160,12 @@ class Catalogue:
         return NotImplementedError
 
     def bkg_spatial_pdf(self, ra, dec):
-        return NotImplementedError
+        # Evaluated the background probability in a specified direction
+        # and returns the value that corresponds to a map with the same
+        # nside as a neutrino map.
+        bkg_pix = hp.ang2pix(self.nside, np.pi/2. - dec, ra)
+        numap_npix = hp.nside2npix(self.numap_nside)
+        return self.bkg_distribution[bkg_pix] * self.npix / numap_npix
 
     def set_bkg_distribution(self):
         return NotImplementedError
@@ -306,7 +311,7 @@ class Hypothesis:
             #for i, nu in enumerate(selected_nus):
             #    print(i, nu)
         elif self.name == 'bolometric_fluence_weight':
-            # Select only neutrinos that can be coincident with the 528 accretion flares
+            # Select only neutrinos that can be coincident with the 524 accretion flares
             nutimes = np.array(
                 [nu.time_mjd for nu in fixed_catalogue]
             )
