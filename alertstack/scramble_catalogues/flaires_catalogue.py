@@ -108,10 +108,24 @@ class FlairesCatalogue(IsotropicExtragalacticCatalogue):
         # Minimal declination is set to the minimum of ZTF.
         return -90.
 
+    @staticmethod
+    def set_nside():
+        # nside of the bkg distribution.
+        return 128
+
+    def set_npix(self):
+        # npix of the bkg distribution.
+        return hp.nside2npix(self.nside)
+
     def set_bkg_distribution(self):
         return  self.generate_bkg_distribution_allsky(
                 self.data, nside=16, hd_nside=128, sigma_smoothing=8.,
         )
+
+    def set_bkg_pdf_per_source(self, cat):
+        # Given the sources in the catalog, set the background
+        # probability for each one of them.
+        cat["bkg_pdf"] = self.bkg_spatial_pdf(cat["ra_rad"], cat["dec_rad"])
 
     def select_random_dirs(self, size):
 
