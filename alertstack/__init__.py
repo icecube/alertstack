@@ -11,11 +11,6 @@ import time
 
 alertstack_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/")
 
-cat_dtype = np.dtype([
-    ("Ra", float),
-    ("Dec", float)
-])
-
 
 class PointSource:
 
