@@ -1,5 +1,5 @@
 from alertstack import (
-    PointSource, alertstack_data_dir
+    Catalogue, PointSource, alertstack_data_dir
 )
 from astropy.io import fits
 #import healpy as hp
