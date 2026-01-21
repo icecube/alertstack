@@ -66,18 +66,7 @@ class PointSource:
         following the probability map of theevent.
         """
         raise NotImplementedError
-
-    def eval_source_weight(self):
-        """Evaluate the spacial PDF for this neutrino event.
-
-        Parameters
-        ----------
-        ra : `float`
-            Right Ascension [radiants].
-        dec : `float`
-            Declination [radiants].
-        """
-        return self.weight
+        
 
 class Catalogue:
 
