@@ -222,15 +222,6 @@ class Catalogue:
         """
         return NotImplementedError
 
-class FixedCatalogue(Catalogue):
-
-    def __getitem__(self, item):
-        return self.data[item]
-
-    def __iter__(self):
-        return self.data.__iter__()
-
-
 
 class ScrambleCatalogue(Catalogue):
 

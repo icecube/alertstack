@@ -1,5 +1,5 @@
 from alertstack import (
-    PointSource, FixedCatalogue, alertstack_data_dir
+    PointSource, alertstack_data_dir
 )
 from astropy.io import fits
 #import healpy as hp
@@ -139,7 +139,7 @@ class HealpixNeutrinoAlert(PointSource):
         pos = self.extract_ra_dec(ind)
         return pos
 
-class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
+class CircularisedNeutrinoAlertCatalogue(Catalogue):
     '''
         This class contains a subset of alerts that were published for the TXS paper. The catalog 
         only includes circularised errors and signalness = 0.5 for every alert. 
@@ -185,7 +185,7 @@ except KeyError:
     logging.warning("No NU_SKYMAP_DIR variable set. If you do not set this, importing a "
                    "HealpixNeutrinoAlertCatalogue will raise an error.")
 
-class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
+class HealpixNeutrinoAlertCatalogue(Catalogue):
     '''
         Catalog containing all the neutrino alerts in the alert catalog v2. It loads the healpix skymaps 
         with the likelihood information from the Millipede scans. 
