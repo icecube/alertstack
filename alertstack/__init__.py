@@ -13,8 +13,19 @@ alertstack_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "
 
 
 class PointSource:
+    """Basic class for neutrino events.
+    """
 
     def eval_spatial_pdf(self, ra, dec):
+        """Evaluate the spacial PDF for this neutrino event.
+
+        Parameters
+        ----------
+        ra : `float`
+            Right Ascension [radiants].
+        dec : `float`
+            Declination [radiants].
+        """
         raise NotImplementedError
 
     @staticmethod
@@ -26,6 +37,7 @@ class PointSource:
         with right ascension as longitude and declination
         as latitude. This function uses the Vincenty formula
         for calculating the distance.
+        
         Parameters
         ----------
         lon1 : array_like
@@ -50,9 +62,21 @@ class PointSource:
         )
 
     def simulate_position(self):
+        """Sample randomly a combination of ra and dec
+        following the probability map of theevent.
+        """
         raise NotImplementedError
 
     def eval_source_weight(self):
+        """Evaluate the spacial PDF for this neutrino event.
+
+        Parameters
+        ----------
+        ra : `float`
+            Right Ascension [radiants].
+        dec : `float`
+            Declination [radiants].
+        """
         return self.weight
 
 class Catalogue:
