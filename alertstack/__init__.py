@@ -69,6 +69,8 @@ class PointSource:
         
 
 class Catalogue:
+    """Basic any type of catalogue (of neutrinos or astrophysical sources).
+    """
 
     def __init__(self):
         self.data = self.parse_data()
@@ -83,34 +85,54 @@ class Catalogue:
 
     @staticmethod
     def parse_data():
+        """Load the catalogue.
+        """
         return NotImplementedError
 
     @staticmethod
     def set_gp_threshold():
+        """Set a cut in galactic latitude for the catalogue
+        (exclude the sources with a smaller latitude in absolute value).
+        """
         return NotImplementedError
 
     @staticmethod
     def set_min_declination():
+        """Set a cut in declination for the catalogue
+        (exclude the sources with a smaller declination).
+        """
         return NotImplementedError
 
     @staticmethod
     def set_nside():
+        """Set the nside for the final resolution of the healpix map
+        describing the distribution of sources.
+        """
+        return NotImplementedError
+
+    def set_npix(self):
+        """Set the npix for the final resolution of the healpix map
+        describing the distribution of sources.
+        """
         return NotImplementedError
 
     @staticmethod
     def generate_bkg_distribution_allsky(
         cat, nside, hd_nside=128, sigma_smoothing=15.,
     ):
-        """
-        Given the coordinates of the sources, it returns an all-sky
+        """Given the coordinates of the sources, it returns an all-sky
         probability map.
-    
-        :param catalog: catalog with info regarding coordinates
-        :param nside: nside for healpix histogramming of sources
-        :param hd_nside: up to which nside the map must be upgraded
-        :param sigma_smoothing [deg]: smoothing to apply to the 
-        healpix histogram
-        :return: the healpix map with the probabilities
+
+        Parameters
+        ----------
+        catalog: `pandas.DataFrame`
+            catalog with info regarding coordinates
+        nside: `int`
+            nside for healpix histogramming of sources
+        hd_nside: `int`
+            up to which nside the map must be upgraded
+        sigma_smoothing [deg]: `float`
+            smoothing to apply to the healpix histogram
         """
 
         theta = np.pi/2. - cat["dec_rad"].to_numpy()
@@ -133,14 +155,16 @@ class Catalogue:
     def apply_cuts_on_bkg_distribution(
         bins_probs, min_declination=-25, gp_threshold=8.
     ):
-        """
-        Upgrades the map resolution and applies the necessary cuts.
-    
-        :param bins_probs: the initial healpix map (an array)
-        :param min_theta [deg]: lower cut on declination
-        :param max_gal_lat [deg]: exclude the galactic plane up to this
-        latitude
-        :return: upgraded map with cuts applied
+        """Upgrades the map resolution and applies the necessary cuts.
+
+        Parameters
+        ----------
+        bins_probs: `numpy.array`
+            the initial healpix map (an array)
+        min_theta [deg]: `float`
+            lower cut on declination
+        max_gal_lat [deg]: `float`
+            exclude the galactic plane up to this latitude
         """
 
         hd_npix = len(bins_probs)
@@ -164,21 +188,38 @@ class Catalogue:
     
         return bins_probs
 
-    def set_npix(self):
-        return NotImplementedError
-
     def bkg_spatial_pdf(self, ra, dec):
-        # Evaluated the background probability in a specified direction
-        # and returns the value that corresponds to a map with the same
-        # nside as a neutrino map.
+        """Evaluates the background probability in a specified direction
+        and returns the value that corresponds to a map with the same
+        nside as a neutrino map.
+
+        Parameters
+        ----------
+        ra: `float`
+            Right Ascension [radiants]
+        dec [deg]: `float`
+            Declination [radiants]
+        """
+        
         bkg_pix = hp.ang2pix(self.nside, np.pi/2. - dec, ra)
         numap_npix = hp.nside2npix(self.numap_nside)
         return self.bkg_distribution[bkg_pix] * self.npix / numap_npix
 
     def set_bkg_distribution(self):
+        """Contains the logic necessary to generate an appropriate
+        background distribution for the specific catalogue.
+        """
         return NotImplementedError
 
     def set_bkg_pdf_per_source(self, cat):
+        """Evaluates for all the sources in the catalogue the background
+        probability in their positions.
+
+        Parameters
+        ----------
+        cat: `pandas.DataFrame`
+            the catalogue of sources
+        """
         return NotImplementedError
 
 class FixedCatalogue(Catalogue):
