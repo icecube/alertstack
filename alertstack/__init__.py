@@ -278,14 +278,33 @@ class ScrambleCatalogue(Catalogue):
         return NotImplementedError
 
 class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
+    """Class for catalogues of astrophysical sources that are isotropic
+    (at least in part of the sky).
+    """
 
-    def __init__(self, nside=1024):
+    def __init__(self):
         ScrambleCatalogue.__init__(self)
 
     def scramble_positions_outside_GP(self, gp_cut=10., min_dec_deg=-90.):
-        # Scramble positions directly outside the galactic plane
+        """Scramble positions directly outside the galactic plane
+
+        Parameters
+        ----------
+        gp_cut: `float`
+            Cut in galactic latitude (absolute value), in degrees.
+        min_dec_deg: `float`
+            Cut in declination (minimum value), in degrees.
+        """
 
         def perform_scramble_outside_GP(data=self.data):
+            """Function to scramble solely outside of the galactic plane.
+            The cut in declination is performed afterwards.
+    
+            Parameters
+            ----------
+            data: `pandas.DataFrame`
+                The catalogue that has to be scrambled.
+            """
             
             gal_l_vals = np.random.uniform(low=0, high=2*np.pi, size=len(data))
          
@@ -332,7 +351,13 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
         return ra_vals, dec_vals
     
     def scramble_positions(self, min_dec=-90.):
-        # Scramble positions
+        """Scramble positions with only a cut in declination.
+
+        Parameters
+        ----------
+        min_dec: `float`
+            Cut in declination (minimum value), in degrees.
+        """
         
         ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
         min_dec_rad = min_dec * np.pi / 180.
@@ -345,7 +370,14 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
 
 
 def is_outside_GP(ra,dec, threshold=10.0):
-    # Check if a position in the sky (in degrees) is outside of the galactic plane
+    """Check if a position in the sky (in degrees)
+    is outside of the galactic plane.
+
+    Parameters
+    ----------
+    threshold: `float`
+        Cut in galactic latitude (absolute value), in degrees.
+    """
 
     eq = SkyCoord(ra*u.deg, dec*u.deg, frame='icrs')
     gal = eq.galactic
