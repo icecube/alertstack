@@ -63,17 +63,57 @@ class PointSource:
 
     def simulate_position(self):
         """Sample randomly a combination of ra and dec
-        following the probability map of theevent.
+        following the probability map of the event.
         """
         raise NotImplementedError
+
+    
+    def eval_source_weight(self):
+        """Return the weight for this specific source.
+        """
+        return self.weight
         
 
 class Catalogue:
-    """Basic any type of catalogue (of neutrinos or astrophysical sources).
+    """Basic class for any type of catalogue (of neutrinos or astrophysical sources).
     """
 
     def __init__(self):
         self.data = self.parse_data()
+
+    @staticmethod
+    def parse_data():
+        """Load the catalogue.
+        """
+        return NotImplementedError
+
+
+class FixedCatalogue(Catalogue):
+    """Class for catalogues of neutrino events (that are not scrambled).
+    """
+
+    def __getitem__(self, item):        
+        """Dark magic function to make the catalogue iterable.
+
+        Parameters
+        ----------
+        item : `int`?
+            Index of the desired item?
+        """
+        return self.data[item]
+
+    def __iter__(self):        
+        """Dark magic function to make the catalogue iterable.
+        """
+        return self.data.__iter__()
+
+
+class ScrambleCatalogue(Catalogue):
+    """Class for catalogues of astrophysical sources (that are scrambled).
+    """
+
+    def __init__(self):
+        Catalogue.__init__(self)
         self.gp_threshold = self.set_gp_threshold()
         self.min_declination = self.set_min_declination()
         self.nside = self.set_nside()
@@ -82,12 +122,6 @@ class Catalogue:
         self.numap_npix = hp.nside2npix(self.numap_nside)
         self.bkg_distribution = self.set_bkg_distribution()
         self.set_bkg_pdf_per_source(self.data)
-
-    @staticmethod
-    def parse_data():
-        """Load the catalogue.
-        """
-        return NotImplementedError
 
     @staticmethod
     def set_gp_threshold():
@@ -197,7 +231,7 @@ class Catalogue:
         ----------
         ra: `float`
             Right Ascension [radiants]
-        dec [deg]: `float`
+        dec: `float`
             Declination [radiants]
         """
         
@@ -221,18 +255,21 @@ class Catalogue:
             the catalogue of sources
         """
         return NotImplementedError
-
-
-class ScrambleCatalogue(Catalogue):
-
+    
     def unblind(self):
+        """Unblind the catalog (obsolete, to be reviewed).
+        """
         return self.data
 
     def scramble(self):
+        """Scramble the sources.
+        """
         return NotImplementedError
 
     @staticmethod
     def extract_ra_dec(nside, index):
+        """Basic class for any type of catalogue (of neutrinos or astrophysical sources).
+        """
         (colat, ra) = hp.pix2ang(nside, index, nest=True)
         dec = np.pi / 2. - colat
         return ra, dec
