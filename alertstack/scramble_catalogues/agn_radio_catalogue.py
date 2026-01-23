@@ -4,14 +4,14 @@ import healpy as hp
 import numpy as np
 import os
 import logging
-from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
+from alertstack import AnisotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
 from numpy.lib.recfunctions import rename_fields
 from astropy import units as u
 from astropy.coordinates import SkyCoord, ICRS
 import pandas as pd
 
 
-class AstrogeoAGNCatalogue(IsotropicExtragalacticCatalogue):
+class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
     '''
     Loads Astrogeo RFC catalog and selects AGNs with S > 0.15 mJy.
     '''

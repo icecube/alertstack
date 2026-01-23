@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 import pandas as pd
 import pickle as pkl
-from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
+from alertstack import AnisotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
 from hellolancel.TS_input import (
     p_flux_bg, p_flux_sig, p_strength_bg, p_strength_sig
 )
@@ -17,7 +17,7 @@ from astropy.coordinates import SkyCoord
 import astropy.io.ascii
 
 
-class AccretionFlaresSjoertCatalogue(IsotropicExtragalacticCatalogue):
+class AccretionFlaresSjoertCatalogue(AnisotropicExtragalacticCatalogue):
     '''
     Loads Sjoert's 63 accretion flares.
     '''

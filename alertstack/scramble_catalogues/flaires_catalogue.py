@@ -9,13 +9,13 @@ import logging
 from pathlib import Path
 import pandas as pd
 import pickle as pkl
-from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
+from alertstack import AnisotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
 from numpy.lib.recfunctions import rename_fields
 from astropy import units as u
 import astropy.io.ascii
 
 
-class FlairesCatalogue(IsotropicExtragalacticCatalogue):
+class FlairesCatalogue(AnisotropicExtragalacticCatalogue):
     '''
     Loads the 528 accretion flares used in Flairestack.
     '''

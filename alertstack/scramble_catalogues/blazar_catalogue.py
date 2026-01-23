@@ -1,12 +1,21 @@
-from astropy.io import fits
-import numpy as np
-import os
+import copy
+import healpy as hp
 import logging
-from pathlib import Path
+import numpy as np
+import pandas as pd
 import pickle as pkl
-from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
-from numpy.lib.recfunctions import rename_fields
+import os
+
+from alertstack import (
+    alertstack_data_dir,
+    Hypothesis,
+    is_outside_GP,
+    IsotropicExtragalacticCatalogue,
+)
 from astropy import units as u
+from astropy.io import fits
+from numpy.lib.recfunctions import rename_fields
+from pathlib import Path
 
 # For the LC 
 
@@ -30,9 +39,13 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         logger.setLevel("DEBUG")
 
         # Load catalog
-        with fits.open(os.path.join(alertstack_data_dir, "table-4LAC-DR2-h.fits")) as hdul:
-            cat = hdul[1].data
-        cat = np.sort(cat, order="Energy_Flux100")[::-1]
+        with fits.open(os.path.join(alertstack_data_dir, "table-4LAC-DR3-h.fits")) as hdul:
+            cat = pd.DataFrame(hdul[1].data)
+        for key in cat.keys():
+            if cat[key].dtype == '>f8':
+                cat[key] = cat[key].astype('f8')
+        cat["Energy_Flux100"] = cat["Energy_Flux100"].astype('f8')
+        cat = cat.sort_values("Energy_Flux100", ascending=False)
 
         # Select blazars
         logging.info("Selecting blazars from 4FGL catalogue")
@@ -40,36 +53,58 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         blazar_class = ["bll", "BLL", "fsrq", "FSRQ", "bcu", "BCU"]
 
         logging.info("Using all sources from class {0}".format(blazar_class))
-        mask = np.array([x["CLASS"] in blazar_class for x in cat])
-        blazars = np.array(cat[mask])
+        mask = np.array([df_class in blazar_class for df_class in cat["CLASS"]])
+        blazars = cat[mask]
 
         # Apply cut on energy flux
         cut_e = -11.6
-        mask_e = np.array([x["Energy_Flux100"]>10**cut_e for x in blazars])
-        blazars = np.array(blazars[mask_e])
+        mask_e = np.array(blazars["Energy_Flux100"]>10**cut_e)
+        blazars = blazars[mask_e]
 
-        maps = [
-            ("RAJ2000", "ra_rad"),
-            ("DEJ2000", "dec_rad"),
-        ]
-
-        for (old_key, new_key) in maps:
-
-            blazars = rename_fields(blazars, {old_key: new_key})
+        maps = {
+            "RAJ2000": "ra_deg",
+            "DEJ2000": "dec_deg",
+        }
+        
+        blazars = blazars.rename(columns=maps)
+        blazars.insert(2, 'dec_rad', blazars['dec_deg']*np.pi/180.)
+        blazars.insert(2, 'ra_rad', blazars['ra_deg']*np.pi/180.)
 
         # Apply cut on latitude 
-        mask_GP = [is_outside_GP(blazars['ra_rad'][i],blazars['dec_rad'][i]) for i in range(len(blazars))]
-        blazars = blazars[mask_GP] 
+        new_index = np.arange(len(blazars))
+        blazars = blazars.set_index(new_index)
+        
+        mask_GP = [
+            is_outside_GP(
+                blazars.at[i, 'ra_deg'],blazars.at[i, 'dec_deg']
+            ) for i in range(len(blazars))
+        ]
+        blazars = blazars[mask_GP]
+        new_index = np.arange(len(blazars))
+        blazars = blazars.set_index(new_index)
+        blazars.insert(
+            len(blazars.keys()), 'bkg_pdf', np.empty(len(blazars))
+        )
 
         logging.info("Found {0} sources in total".format(len(blazars)))
 
-        return blazars 
+        return blazars
+
+    @staticmethod
+    def set_gp_threshold():
+        return 10.
+
+    def set_bkg_pdf_per_source(self, cat):
+        cat['bkg_pdf'] = 1 / self.numap_npix
+        return
 
     def scramble(self):
         ra, dec = self.scramble_positions_outside_GP()
-        cat = np.copy(self.data)
-        cat['ra_rad'] = ra
+        cat = copy.copy(self.data)
+        cat["ra_rad"] = ra
         cat["dec_rad"] = dec
+        cat["ra_deg"] = ra * 180. / np.pi
+        cat["dec_deg"] = dec * 180. / np.pi
         return cat
     
 

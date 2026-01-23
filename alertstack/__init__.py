@@ -107,6 +107,21 @@ class FixedCatalogue(Catalogue):
         """
         return self.data.__iter__()
 
+    @staticmethod
+    def extract_ra_dec(nside, index):
+        """Exctract R.A. and Dec. given the index of the healpix map.
+
+        Parameters
+        ----------
+        nside : `int`
+            nside of the healpix map.
+        index : `int`
+            Index of the pixel. A nested ordering is assumed.
+        """
+        (colat, ra) = hp.pix2ang(nside, index, nest=True)
+        dec = np.pi / 2. - colat
+        return ra, dec
+
 
 class ScrambleCatalogue(Catalogue):
     """Class for catalogues of astrophysical sources (that are scrambled).
@@ -116,12 +131,8 @@ class ScrambleCatalogue(Catalogue):
         Catalogue.__init__(self)
         self.gp_threshold = self.set_gp_threshold()
         self.min_declination = self.set_min_declination()
-        self.nside = self.set_nside()
-        self.npix = self.set_npix()
         self.numap_nside = 1024
         self.numap_npix = hp.nside2npix(self.numap_nside)
-        self.bkg_distribution = self.set_bkg_distribution()
-        self.set_bkg_pdf_per_source(self.data)
 
     @staticmethod
     def set_gp_threshold():
@@ -136,6 +147,119 @@ class ScrambleCatalogue(Catalogue):
         (exclude the sources with a smaller declination).
         """
         return NotImplementedError
+    
+    def unblind(self):
+        """Unblind the catalog (obsolete, to be reviewed).
+        """
+        return self.data
+
+    def scramble(self):
+        """Scramble the sources.
+        """
+        return NotImplementedError
+
+class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
+    """Class for catalogues of astrophysical sources that are isotropic
+    (at least in part of the sky).
+    """
+
+    def __init__(self):
+        ScrambleCatalogue.__init__(self)
+        self.set_bkg_pdf_per_source(self.data)
+
+    def scramble_positions_outside_GP(self, gp_cut=10., min_dec_deg=-90.):
+        """Scramble positions directly outside the galactic plane
+
+        Parameters
+        ----------
+        gp_cut: `float`
+            Cut in galactic latitude (absolute value), in degrees.
+        min_dec_deg: `float`
+            Cut in declination (minimum value), in degrees.
+        """
+
+        def perform_scramble_outside_GP(data=self.data):
+            """Function to scramble solely outside of the galactic plane.
+            The cut in declination is performed afterwards.
+    
+            Parameters
+            ----------
+            data: `pandas.DataFrame`
+                The catalogue that has to be scrambled.
+            """
+            
+            gal_l_vals = np.random.uniform(low=0, high=2*np.pi, size=len(data))
+         
+            # divide the sky into two areas, half of the blazars on each side
+            threshold = np.deg2rad(gp_cut) # 10 degrees 
+            size_half = int(len(data) / 2)
+    
+            gal_b_vals_up = np.arccos(
+                2*np.random.uniform(
+                    low=0,high=0.5*(1-np.sin(threshold)),size=size_half
+                )-1
+            ) - np.pi/2.
+            gal_b_vals_down = np.arccos(
+                2 * np.random.uniform(
+                    low=0.5*(1+np.sin(threshold)),
+                    high=1,
+                    size=(len(data) - size_half)
+                ) - 1
+            ) - np.pi / 2.
+            gal_b_vals = np.concatenate(
+                (gal_b_vals_down,gal_b_vals_up),axis=0
+            )
+            np.random.shuffle(gal_b_vals)
+    
+            gal = SkyCoord(
+                l = gal_l_vals*u.rad, b = gal_b_vals*u.rad, frame='galactic'
+            )
+            ra_vals = gal.icrs.ra.rad
+            dec_vals = gal.icrs.dec.rad
+
+            return ra_vals, dec_vals
+
+        ra_vals, dec_vals = perform_scramble_outside_GP()
+        too_low_mask = dec_vals * 180. / np.pi < min_dec_deg
+
+        while np.sum(too_low_mask) > 0:
+            # repeat scramble only for sources too low in declination
+            (
+                ra_vals[too_low_mask], dec_vals[too_low_mask]
+            ) = perform_scramble_outside_GP(self.data[too_low_mask])
+            too_low_mask = dec_vals * 180. / np.pi < min_dec_deg
+        
+
+        return ra_vals, dec_vals
+    
+    def scramble_positions(self, min_dec=-90.):
+        """Scramble positions with only a cut in declination.
+
+        Parameters
+        ----------
+        min_dec: `float`
+            Cut in declination (minimum value), in degrees.
+        """
+        
+        ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
+        min_dec_rad = min_dec * np.pi / 180.
+        dec_vals = np.arccos(
+            (
+                1-np.sin(min_dec_rad)
+            )*np.random.uniform(size=len(self.data)) + np.sin(min_dec_rad)
+        ) - np.pi/2.
+        return ra_vals, dec_vals
+
+
+class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
+    """Class for catalogues of astrophysical sources that are anisotropic.
+    """
+
+    def __init__(self):
+        ScrambleCatalogue.__init__(self)
+        self.nside = self.set_nside()
+        self.npix = self.set_npix()
+        self.bkg_distribution = self.set_bkg_distribution()
 
     @staticmethod
     def set_nside():
@@ -255,118 +379,6 @@ class ScrambleCatalogue(Catalogue):
             the catalogue of sources
         """
         return NotImplementedError
-    
-    def unblind(self):
-        """Unblind the catalog (obsolete, to be reviewed).
-        """
-        return self.data
-
-    def scramble(self):
-        """Scramble the sources.
-        """
-        return NotImplementedError
-
-    @staticmethod
-    def extract_ra_dec(nside, index):
-        """Basic class for any type of catalogue (of neutrinos or astrophysical sources).
-        """
-        (colat, ra) = hp.pix2ang(nside, index, nest=True)
-        dec = np.pi / 2. - colat
-        return ra, dec
-
-    def return_ra_dec(self):
-        return NotImplementedError
-
-class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
-    """Class for catalogues of astrophysical sources that are isotropic
-    (at least in part of the sky).
-    """
-
-    def __init__(self):
-        ScrambleCatalogue.__init__(self)
-
-    def scramble_positions_outside_GP(self, gp_cut=10., min_dec_deg=-90.):
-        """Scramble positions directly outside the galactic plane
-
-        Parameters
-        ----------
-        gp_cut: `float`
-            Cut in galactic latitude (absolute value), in degrees.
-        min_dec_deg: `float`
-            Cut in declination (minimum value), in degrees.
-        """
-
-        def perform_scramble_outside_GP(data=self.data):
-            """Function to scramble solely outside of the galactic plane.
-            The cut in declination is performed afterwards.
-    
-            Parameters
-            ----------
-            data: `pandas.DataFrame`
-                The catalogue that has to be scrambled.
-            """
-            
-            gal_l_vals = np.random.uniform(low=0, high=2*np.pi, size=len(data))
-         
-            # divide the sky into two areas, half of the blazars on each side
-            threshold = np.deg2rad(gp_cut) # 10 degrees 
-            size_half = int(len(data) / 2)
-    
-            gal_b_vals_up = np.arccos(
-                2*np.random.uniform(
-                    low=0,high=0.5*(1-np.sin(threshold)),size=size_half
-                )-1
-            ) - np.pi/2.
-            gal_b_vals_down = np.arccos(
-                2 * np.random.uniform(
-                    low=0.5*(1+np.sin(threshold)),
-                    high=1,
-                    size=(len(data) - size_half)
-                ) - 1
-            ) - np.pi / 2.
-            gal_b_vals = np.concatenate(
-                (gal_b_vals_down,gal_b_vals_up),axis=0
-            )
-            np.random.shuffle(gal_b_vals)
-    
-            gal = SkyCoord(
-                l = gal_l_vals*u.rad, b = gal_b_vals*u.rad, frame='galactic'
-            )
-            ra_vals = gal.icrs.ra.rad
-            dec_vals = gal.icrs.dec.rad
-
-            return ra_vals, dec_vals
-
-        ra_vals, dec_vals = perform_scramble_outside_GP()
-        too_low_mask = dec_vals * 180. / np.pi < min_dec_deg
-
-        while np.sum(too_low_mask) > 0:
-            # repeat scramble only for sources too low in declination
-            (
-                ra_vals[too_low_mask], dec_vals[too_low_mask]
-            ) = perform_scramble_outside_GP(self.data[too_low_mask])
-            too_low_mask = dec_vals * 180. / np.pi < min_dec_deg
-        
-
-        return ra_vals, dec_vals
-    
-    def scramble_positions(self, min_dec=-90.):
-        """Scramble positions with only a cut in declination.
-
-        Parameters
-        ----------
-        min_dec: `float`
-            Cut in declination (minimum value), in degrees.
-        """
-        
-        ra_vals = np.random.uniform(size=len(self.data)) * 2 * np.pi
-        min_dec_rad = min_dec * np.pi / 180.
-        dec_vals = np.arccos(
-            (
-                1-np.sin(min_dec_rad)
-            )*np.random.uniform(size=len(self.data)) + np.sin(min_dec_rad)
-        ) - np.pi/2.
-        return ra_vals, dec_vals
 
 
 def is_outside_GP(ra,dec, threshold=10.0):
