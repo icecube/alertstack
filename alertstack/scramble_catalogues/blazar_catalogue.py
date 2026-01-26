@@ -17,8 +17,7 @@ from astropy.io import fits
 from numpy.lib.recfunctions import rename_fields
 from pathlib import Path
 
-# For the LC 
-
+# Load the lightcurves (LC) to evaluate the monthly gamma-ray flux.
 try:
     a = Path(alertstack_data_dir) / 'weights_LC.pkl'
     with a.open('rb') as f:
@@ -28,12 +27,15 @@ except KeyError:
 
 
 class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
-    '''
-    Loads Fermi 4LAC-DR, selects blazars and applies a cut on the energy flux and on the latitude.
+    ''' Loads Fermi 4LAC-DR, selects blazars, and applies a cut
+    on the energy flux and on the latitude.
     '''
 
     @staticmethod
     def parse_data():
+        ''' Loads Fermi 4LAC-DR, selects blazars, and applies a cut
+        on the energy flux and on the latitude.
+        '''
 
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
@@ -92,28 +94,27 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
 
     @staticmethod
     def set_gp_threshold():
+        """Set a cut in galactic latitude for the catalogue
+        (exclude the sources with a smaller latitude in absolute value).
+        """
         return 10.
-
-    def set_bkg_pdf_per_source(self, cat):
-        cat['bkg_pdf'] = 1 / self.numap_npix
-        return
-
-    def scramble(self):
-        ra, dec = self.scramble_positions_outside_GP()
-        cat = copy.copy(self.data)
-        cat["ra_rad"] = ra
-        cat["dec_rad"] = dec
-        cat["ra_deg"] = ra * 180. / np.pi
-        cat["dec_deg"] = dec * 180. / np.pi
-        return cat
-    
 
 
 class AverageFluxWeightHypothesis(Hypothesis):
+    """Hypothesis of constant emission from the fermi blazars
+    (average flux as weight)
+    """
     name = "average_flux_weight"
 
     @staticmethod
     def weight_catalogue(cat_data):
+        """Weight the catalogue
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        """
         try:
             return cat_data["Energy_Flux100"]
         except:
@@ -121,10 +122,21 @@ class AverageFluxWeightHypothesis(Hypothesis):
 
         
 class BrightestFluxWeightHypothesis(Hypothesis):
+    """Hypothesis of constant emission from the fermi blazars
+    (average flux as weight). Option to select only the 100 brightest
+    [Probably necessary for older tests. Should it be kept?]
+    """
     name = "brightest_flux_weight"
 
     @staticmethod
     def weight_catalogue(cat_data):
+        """Weight the catalogue
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        """
         weights = cat_data["Energy_Flux100"]
         weights[100:] = 0.
         return weights
@@ -139,6 +151,18 @@ class MonthlyFluxWeightHypothesis(Hypothesis):
 
     @staticmethod
     def weight_catalogue(cat_data, nu_at, ignore_times=False):
+        """Weight the catalogue
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        nu_at: `float`
+            neutrino arrival time
+        ignore_times: `bool`
+            It has no function in here, but maybe keep it
+            for compatibility reasons?
+        """
 
         weights = [data_lc[name][nu_at] for name in cat_data['Source_Name']]
                 

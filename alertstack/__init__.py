@@ -234,6 +234,7 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
     
     def scramble_positions(self, min_dec=-90.):
         """Scramble positions with only a cut in declination.
+        [not used anymore. Remove?]
 
         Parameters
         ----------
@@ -249,6 +250,19 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
             )*np.random.uniform(size=len(self.data)) + np.sin(min_dec_rad)
         ) - np.pi/2.
         return ra_vals, dec_vals
+
+    def set_bkg_pdf_per_source(self, cat):
+        cat['bkg_pdf'] = 1 / self.numap_npix
+        return
+
+    def scramble(self):
+        ra, dec = self.scramble_positions_outside_GP()
+        cat = copy.copy(self.data)
+        cat["ra_rad"] = ra
+        cat["dec_rad"] = dec
+        cat["ra_deg"] = ra * 180. / np.pi
+        cat["dec_deg"] = dec * 180. / np.pi
+        return cat
 
 
 class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
@@ -514,6 +528,11 @@ class Hypothesis:
     @staticmethod
     def weight_catalogue(cat_data):
         """Weight the astrophysical sources according to the hypothesis.
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
         """
         return NotImplementedError
 
