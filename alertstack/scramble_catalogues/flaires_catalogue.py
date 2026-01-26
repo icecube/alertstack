@@ -113,53 +113,10 @@ class FlairesCatalogue(AnisotropicExtragalacticCatalogue):
         # nside of the bkg distribution.
         return 128
 
-    def set_npix(self):
-        # npix of the bkg distribution.
-        return hp.nside2npix(self.nside)
-
     def set_bkg_distribution(self):
         return  self.generate_bkg_distribution_allsky(
                 self.data, nside=16, hd_nside=128, sigma_smoothing=8.,
         )
-
-    def set_bkg_pdf_per_source(self, cat):
-        # Given the sources in the catalog, set the background
-        # probability for each one of them.
-        cat["bkg_pdf"] = self.bkg_spatial_pdf(cat["ra_rad"], cat["dec_rad"])
-
-    def select_random_dirs(self, size):
-
-        npix = len(self.bkg_distribution)
-        nside = hp.npix2nside(npix)
-        selected_bins = np.random.choice(
-            a=np.arange(npix),
-            p=self.bkg_distribution,
-            size=size
-        )
-        
-        ipix = hp.ring2nest(nside, ipix=selected_bins)
-        #ipix=selected_bins
-        
-        n_order = hp.nside2order(nside)
-        n_up = 29 - n_order
-        i_up = ipix * 4 ** n_up
-        i_up += np.random.randint(0, 4 ** n_up, size=np.size(ipix))
-        
-        selected_cotheta, selected_phi = hp.pix2ang(
-            nside=2 ** 29, ipix=i_up, nest=True
-        )
-        selected_theta = (np.pi/2. - selected_cotheta)
-        
-        return selected_phi, selected_theta
-
-    def scramble(self):
-        cat = copy.copy(self.data)
-        ra, dec = self.select_random_dirs(len(cat))
-        cat['ra_rad'] = ra
-        cat["dec_rad"] = dec
-        cat['ra_deg'] = ra * 180. / np.pi
-        cat["dec_deg"] = dec * 180. / np.pi
-        return cat
 
 class FluencebolHypothesis(Hypothesis):
     name = "bolometric_fluence_weight"

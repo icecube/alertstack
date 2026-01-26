@@ -260,6 +260,7 @@ class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
         self.nside = self.set_nside()
         self.npix = self.set_npix()
         self.bkg_distribution = self.set_bkg_distribution()
+        self.set_bkg_pdf_per_source(self.data)
 
     @staticmethod
     def set_nside():
@@ -272,7 +273,7 @@ class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
         """Set the npix for the final resolution of the healpix map
         describing the distribution of sources.
         """
-        return NotImplementedError
+        return hp.nside2npix(self.nside)
 
     @staticmethod
     def generate_bkg_distribution_allsky(
@@ -378,7 +379,41 @@ class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
         cat: `pandas.DataFrame`
             the catalogue of sources
         """
-        return NotImplementedError
+        cat["bkg_pdf"] = self.bkg_spatial_pdf(cat["ra_rad"], cat["dec_rad"])
+
+    def select_random_dirs(self, size):
+        
+        selected_bins = np.random.choice(
+            a=np.arange(self.npix),
+            p=self.bkg_distribution,
+            size=size
+        )
+        
+        ipix = hp.ring2nest(self.nside, ipix=selected_bins)
+        
+        n_order = hp.nside2order(self.nside)
+        n_up = 29 - n_order
+        i_up = ipix * 4 ** n_up
+        i_up += np.random.randint(0, 4 ** n_up, size=np.size(ipix))
+        
+        selected_cotheta, selected_phi = hp.pix2ang(
+            nside=2 ** 29, ipix=i_up, nest=True
+        )
+        selected_theta = (np.pi/2. - selected_cotheta)
+        
+        return selected_phi, selected_theta, selected_bins
+
+    def scramble(self):
+        cat = copy.copy(self.data)
+        ra, dec, selected_bins = self.select_random_dirs(len(cat))
+        cat['ra_rad'] = ra
+        cat["dec_rad"] = dec
+        cat['ra_deg'] = ra * 180. / np.pi
+        cat["dec_deg"] = dec * 180. / np.pi
+        cat["bkg_pdf"] = self.bkg_distribution[selected_bins] * ( 
+            self.npix / self.numap_npix
+        )
+        return cat
 
 
 def is_outside_GP(ra,dec, threshold=10.0):
