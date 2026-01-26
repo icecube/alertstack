@@ -443,6 +443,16 @@ def is_outside_GP(ra,dec, threshold=10.0):
     return abs(gal.b) > threshold_GP
 
 class Hypothesis:
+    """Basic class hypotheses to be tested.
+
+    Parameters
+    ----------
+    fixed_catalogue: `alertstack.FixedCatalogue`
+        The catalogue of neutrino events.
+    min_E: `float`
+        Cut all neutrino events below this energy
+        (useful to investigate the minimal sensitive energy)
+    """
     name = None
 
     def __init__(self, fixed_catalogue, min_E=0.):
@@ -472,10 +482,11 @@ class Hypothesis:
             )
             spatialmask = (nudecs + nudecsplus) > -25.
             self.fixed_catalogue = np.array(fixed_catalogue.data)[timemask & spatialmask & energymask]
-            #selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
-            #selected_nus.sort()
-            #for i, nu in enumerate(selected_nus):
-            #    print(i, nu)
+            # Code to investigate which neutrinos have been selected. Decomment to use it.
+            # selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
+            # selected_nus.sort()
+            # for i, nu in enumerate(selected_nus):
+            #     print(i, nu)
         elif self.name == 'bolometric_fluence_weight':
             # Select only neutrinos that can be coincident with the 524 accretion flares
             nutimes = np.array(
@@ -488,25 +499,41 @@ class Hypothesis:
                 (nutimes >= minflarestime) & (nutimes <= maxflarestime)
             )
             self.fixed_catalogue = np.array(fixed_catalogue.data)[timemask & energymask]
-            #selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
-            #selected_nus.sort()
-            #for i, nu in enumerate(selected_nus):
-            #    print(i, nu)
+            # Code to investigate which neutrinos have been selected. Decomment to use it.
+            # selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
+            # selected_nus.sort()
+            # for i, nu in enumerate(selected_nus):
+            #     print(i, nu)
         else:
             self.fixed_catalogue = np.array(fixed_catalogue.data)[energymask]
             
-        self.source_weights = np.array([source.eval_source_weight() for source in self.fixed_catalogue])
+        self.source_weights = np.array(
+            [source.eval_source_weight() for source in self.fixed_catalogue]
+        )
 
     @staticmethod
     def weight_catalogue(cat_data):
+        """Weight the astrophysical sources according to the hypothesis.
+        """
         return NotImplementedError
 
     
     def calculate_llh(self, cat_data, savedata=None, gp_threshold=10.0):
-        '''
-        Calculate the TS_i of each neutrino as TS_i = log(S/B), where S = max(S_spatial * signalness * w_blazar) 
-        and B = B_spatial. If the neutrino is in the Galactic Plane or TS_i < 0, then TS_i = 0 (S/B = 1, 
-        choose background hypothesis). The final TS of the trial is simply TS = sum(TS_i).
+        '''Calculate the TS_i of each neutrino as TS_i = log(S/B),
+        where S = max(S_spatial * signalness * weight) and B = B_spatial.
+        If the neutrino is in the Galactic Plane (only for Fermi blazars)
+        or TS_i < 0, then TS_i = 0 (S/B = 1, choose background hypothesis).
+        The final TS of the trial is simply TS = sum(TS_i).
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            The dataframe with the catalogue of astrophysical sources.
+        savedata: `bool`
+            Option to save or not the results.
+        gb_threshold: `float`
+            Minimal absolute value of galactic latitude to include the
+            astrophysical sources.
         '''
             
         cat_mask  = is_outside_GP(
@@ -518,35 +545,36 @@ class Hypothesis:
         if savedata is not None:
             final = []
 
+        # Only the Fermi blazars need to be weighted at this point.
         if (
             (self.name != 'monthly_flux_weight') and 
             (self.name != 'strength_flux_weight') and
             (self.name != 'bolometric_fluence_weight')
         ):
-            cat_weights = self.weight_catalogue(cat_data) # w_blazars
+            cat_weights = self.weight_catalogue(cat_data)
             density = np.sum(cat_weights)
 
         lh_array = 0.
 
         for i, source in enumerate(self.fixed_catalogue): # loop over neutrinos
-            
+
+            # Consider only the astrophysical sources within four times the
+            # neutrino error to significantly accelerate the process.
             max_dist = 4 * source.max_err * np.pi/180.
-            
             s_ra, s_de = source.ra_rad, source.dec_rad
             corads = copy.copy(cat_data["ra_rad"]) - s_ra + np.pi
             corads %= 2*np.pi
-
             dist_mask = np.logical_and(
                 np.abs(s_de - cat_data["dec_rad"]) < max_dist,
                 np.abs(corads - np.pi) < max_dist
             )
-            
-            spatial_pdf = np.zeros(len(cat_data["dec_rad"]))
 
+            # Evaluate the spatial pdf
+            spatial_pdf = np.zeros(len(cat_data["dec_rad"]))
             spatial_pdf[dist_mask] = source.eval_spatial_pdf(
                 cat_data["ra_rad"][dist_mask],
                 cat_data["dec_rad"][dist_mask]
-            ) / cat_data["bkg_pdf"][dist_mask] # * (4 * np.pi)
+            ) / cat_data["bkg_pdf"][dist_mask]
 
 
             if self.name != 'average_radio_flux_weight':
@@ -558,10 +586,9 @@ class Hypothesis:
             else:
                 spatial_pdf_mask = spatial_pdf # don't need to mask the GP for the radio catalog
 
+            source_weight = self.source_weights[i] # get signalness
 
-            source_weight = self.source_weights[i] # signalness
-
-
+            # Weights for all hypotheses with a dependency on the time
             if (
                 (self.name == 'monthly_flux_weight') or 
                 (self.name == 'strength_flux_weight') or
@@ -587,36 +614,50 @@ class Hypothesis:
             with open(os.path.join(savedata,"correlations.pkl"), "wb") as fp:
                 pickle.dump(final, fp)
 
-        llh = lh_array
-        return llh
+        return lh_array
 
 
     def inject_signal(self, cat, fraction):
         '''
-        Create signal trials by injecting correlations between neutrino alerts and the catalog sources.
-        '''
+        Create signal trials by injecting correlations
+        between neutrino alerts and the catalog sources.
 
+        Parameters
+        ----------
+        cat: `pandas.DataDrame`
+            The catalogue of astrophysical sources.
+        fraction: `float`
+            Fraction of astrophysical neutrino flux to inject.
+        '''
 
         nucat = self.fixed_catalogue
 
-        
-        n_exp = fraction * np.sum(np.array(self.source_weights)) # Choose expected number of neutrinos (astrophysical or not) to have correlations
-        n_inj = np.random.poisson(n_exp) # Get number of neutrinos with correlations (poisson fluctuation)
+        # Choose expected number of neutrinos (astrophysical or not) to have correlations
+        n_exp = fraction * np.sum(np.array(self.source_weights))
+        # Get number of neutrinos with correlations (Poisson fluctuation)
+        n_inj = np.random.poisson(n_exp)
 
         if n_inj > len(cat):
-            raise Exception("Trying to inject more sources than there are entries in the catalogue! \n"
-                            "There are {0} entries in the catalogue, and the expectation for injection is {1}. \n"
-                            "`Applying random poisson noise, we are trying to inject {2} this trial".format(
-                len(cat), n_exp, n_inj
-            ))
+            raise Exception(
+                "Trying to inject more sources than there are entries"
+                " in the catalogue! \nThere are {0} entries in the"
+                " catalogue, and the expectation for injection is {1}. \n"
+                "`Applying random poisson noise, we are trying"
+                " to inject {2} this trial".format(
+                    len(cat), n_exp, n_inj
+                )
+            )
 
         if n_inj > 0:
 
-            # Choose which neutrinos will have a counterpart (each neutrino can only be injected once in each trial)
+            # Choose which neutrinos will have a counterpart
+            # (each neutrino can only be injected once in each trial)
             ind = np.random.choice(
                 len(np.array(self.source_weights)),
                 size=n_inj, 
-                p=np.array(self.source_weights)/np.sum(np.array(self.source_weights)),
+                p=np.array(self.source_weights)/np.sum(
+                    np.array(self.source_weights)
+                ),
                 replace=False
             )
             
@@ -636,7 +677,8 @@ class Hypothesis:
                     weights = self.weight_catalogue(
                         cat,
                         fixed_source.time_mjd,
-                        ignore_times=True,
+                        ignore_times=True, # The source's time is injected
+                                           # afterwards to fit the time window.
                     )
                 else:
                     weights = self.weight_catalogue(cat)
@@ -669,11 +711,3 @@ class Hypothesis:
                     
 
         return cat
-
-
-class UniformPriorHypothesis(Hypothesis):
-    name = "uniform_prior"
-
-    @staticmethod
-    def weight_catalogue(cat_data):
-        return np.ones(len(cat_data))
