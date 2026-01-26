@@ -382,20 +382,28 @@ class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
         cat["bkg_pdf"] = self.bkg_spatial_pdf(cat["ra_rad"], cat["dec_rad"])
 
     def select_random_dirs(self, size):
-        
+        """Select random directions according to the background
+        distribution.
+
+        Parameters
+        ----------
+        size: `int`
+            number of directions to select
+        """
+
+        # Select randomly a pixel
         selected_bins = np.random.choice(
             a=np.arange(self.npix),
             p=self.bkg_distribution,
             size=size
         )
-        
+
+        # Select randomly a direction inside that pixel
         ipix = hp.ring2nest(self.nside, ipix=selected_bins)
-        
         n_order = hp.nside2order(self.nside)
         n_up = 29 - n_order
         i_up = ipix * 4 ** n_up
         i_up += np.random.randint(0, 4 ** n_up, size=np.size(ipix))
-        
         selected_cotheta, selected_phi = hp.pix2ang(
             nside=2 ** 29, ipix=i_up, nest=True
         )
@@ -404,6 +412,8 @@ class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
         return selected_phi, selected_theta, selected_bins
 
     def scramble(self):
+        """Scramble the sources and update the background probability.
+        """
         cat = copy.copy(self.data)
         ra, dec, selected_bins = self.select_random_dirs(len(cat))
         cat['ra_rad'] = ra
