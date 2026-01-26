@@ -150,7 +150,7 @@ class MonthlyFluxWeightHypothesis(Hypothesis):
     name = "monthly_flux_weight"
 
     @staticmethod
-    def weight_catalogue(cat_data, nu_at, ignore_times=False):
+    def weight_catalogue(cat_data, nu_at):
         """Weight the catalogue
 
         Parameters
@@ -159,9 +159,6 @@ class MonthlyFluxWeightHypothesis(Hypothesis):
             catalogue to weight
         nu_at: `float`
             neutrino arrival time
-        ignore_times: `bool`
-            It has no function in here, but maybe keep it
-            for compatibility reasons?
         """
 
         weights = [data_lc[name][nu_at] for name in cat_data['Source_Name']]

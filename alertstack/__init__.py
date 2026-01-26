@@ -689,7 +689,6 @@ class Hypothesis:
 
                 # Choose which counterpart, according to the weighting scheme
                 if (
-                    (self.name == 'monthly_flux_weight') or 
                     (self.name == 'strength_flux_weight') or
                     (self.name == 'bolometric_fluence_weight')
                 ):
@@ -698,6 +697,11 @@ class Hypothesis:
                         fixed_source.time_mjd,
                         ignore_times=True, # The source's time is injected
                                            # afterwards to fit the time window.
+                    )
+                elif self.name == 'monthly_flux_weight':
+                    weights = self.weight_catalogue(
+                        cat,
+                        fixed_source.time_mjd,
                     )
                 else:
                     weights = self.weight_catalogue(cat)
