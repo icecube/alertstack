@@ -12,6 +12,26 @@ import time
 
 
 class Analyse:
+    """Class that treats the single analysis as an object.
+
+    Parameters
+    ----------
+    cat: `pandas.DataFrame`
+        Catalogue of astrophysical sources
+    hypos: `list(alertstack.Hypothesis)`
+        List of hypotheses to be tested. Initially, the list was meant
+        to test more hypotheses at the same time, but now this is
+        in practice never done. Maybe this should be updated?
+    fixed_sources: `alertstack.FixedCatalogue`
+        Catalogue of neutrino alerts
+    cache_dir: `str`
+        Directory where the results will be cached.
+    min_E: `float`
+        Cut all neutrino events below this energy (in TeV)
+        (useful to investigate the minimal sensitive energy)
+    clean_cache: `bool`
+        If true, clean the cache directory before saving new results.
+    """
 
     def __init__(self, cat, hypos, fixed_sources, cache_dir, min_E = 0, clean_cache=False):
         self.base_cat = cat
@@ -37,37 +57,45 @@ class Analyse:
         self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
     def save_path(self):
+        """Get the path where the results will be saved.
+        """
         self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return os.path.join(self.cache_dir, "{0}.pkl".format(self.pid))
 
     def set_injection_hypo(self, injection_hypo, min_E=0):
+        """Set the hypothesis that will determine how the injections will work.
+    
+        Parameters
+        ----------
+        injection_hypo: `alertstack.Hypothesis`
+            hypothesis that will determine how the injections will work
+        min_E: `float`
+            Cut all neutrino events below this energy (in TeV)
+            (useful to investigate the minimal sensitive energy)
+        """
         self._injection_hypo = injection_hypo(self.fixed_sources, min_E)
 
     def run_trial(self, fraction=0.0, random_seed=None):
-        '''
-        Run individual trial. This function scrambles the catalog sources, injects the 
-        correlations and calculates the TS of the trial. Returns a dictionary with the 
-        results.
-        '''
+        '''Run individual trial. This function scrambles the catalog sources,
+        injects the correlations and calculates the TS of the trial.
+        Returns a dictionary with the results.
 
-        # t0 = time.time()
-
+        Parameters
+        ----------
+        fraction: `float`
+            Fraction of astrophysical neutrino flux to inject.
+        random_seed: `float | None`
+            Seed used to sample randomly from distributions
+        '''
         np.random.seed(random_seed)
         
         if fraction > 1.0:
             raise Exception("Fraction of correlated alerts cannot exceed 1.0!")
 
         cat = self.base_cat.scramble()
-        # print(bkg_pdf_per_source)
-        
-        # t1 = time.time()
-        # print(f"Scramble performed in: {t1-t0} s")
 
         if self._injection_hypo is not None:
             cat = self._injection_hypo.inject_signal(cat=cat, fraction=fraction)
-
-        #t2 = time.time()
-        #print(f"Injection performed in: {t2-t1} s")
 
         res = dict()
 
@@ -76,48 +104,58 @@ class Analyse:
                 cat, gp_threshold=self.base_cat.gp_threshold
             )]
 
-        #t3 = time.time()
-        #print(f"Llh calculated in: {t3-t2} s")
-
         return res
 
     def run_trial_wrapper(self, p):
+        '''Wrapper for the function run_trial. Useful to parallelize.
+
+        Parameters
+        ----------
+        p: `???`
+            All the parameters for the function run_trial
+        '''
         return self.run_trial(*p)
 
     def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, n_steps=10,
-                    max_workers=min(32, os.cpu_count() + 4), chunksize=1,
-                    **kwargs):
-        '''
-        Run the analysis. It creates the list of trials based on the input parameters. 
+                    max_workers=min(32, os.cpu_count() + 4), chunksize=1):
+        '''Run the analysis. It creates the list of trials based on the input parameters. 
         It calls the run_trial function and parses the fraction of astrophysical neutrinos to inject.  
-        ------------------------
+        
         Parameters:
-        :param injection_hypo: Injection Hypothesis object
-        :param n_trials: Number of trials to run for each injection strength. 10x this number
-        will be run as background trials
-        :param fraction: Maximum fraction of astrophysical neutrinos to be injected
-        :param n_steps: Number of different injection steps to test, between 0 and fraction.
-        :param max_workers: tqdm max_workers parameter, setting number of cpus to be used
-        :param chunksize: tqdm chunksize parameter, Size of chunks sent to worker processes
-        :param kwargs: Keyword args
+        -----------
+        injection_hypo: `alertstack.Hypothesis`
+            Injection Hypothesis object
+        n_trials: `int`
+            Number of trials to run for each injection strength.
+            10x this number will be run as background trials
+        fraction: `float`
+            Maximum fraction of astrophysical neutrinos to be injected
+        n_steps: `int`
+            Number of different injection steps to test between 0 and fraction.
+        max_workers: `int`
+            tqdm max_workers parameter, setting number of cpus to be used
+        chunksize: `int`
+            tqdm chunksize parameter, Size of chunks sent to worker processes
         '''
 
         self.set_injection_hypo(injection_hypo)
 
         # Create list of fractions to loop over. Includes ten times as many background trials.
-
         fs = [0.0 for _ in range(n_trials * 10)]
         for step in np.linspace(0.0, fraction, n_steps + 1)[1:]:
             fs += [step for _ in range(n_trials)]
 
         # Create input list
-
         inputs = [(x, int(random.random() * 10 ** 8)) for x in fs]
 
         # Run multiprocessing if circularised neutrino alerts, regular loop otherwise
- 
         if 'Healpix' not in type(self.fixed_sources).__name__:
-            results = process_map(self.run_trial_wrapper, inputs, max_workers=max_workers, chunksize=chunksize)
+            results = process_map(
+                self.run_trial_wrapper,
+                inputs,
+                max_workers=max_workers,
+                chunksize=chunksize,
+            )
         else:
             results = []
             for i in tqdm(range(len(inputs))):
@@ -126,7 +164,6 @@ class Analyse:
         all_res = dict()
 
         # Combine results into nested dictionaries
-
         for fraction in sorted(list(set(fs))):
             mask = np.array(fs) == fraction
             cut_results = np.array(results)[mask]
@@ -143,6 +180,15 @@ class Analyse:
 
     @staticmethod
     def combine_res_dicts(dict_a, dict_b):
+        '''Combine dictionaries for different results in one single dict
+        
+        Parameters:
+        -----------
+        dict_a: `dict`
+            first dictionary
+        dict_b: `dict`
+            second dictionary
+        '''
         for hypo, hypo_res in dict_a.items():
             if hypo in dict_b.keys():
                 for key, val in dict_a[hypo].items():
@@ -156,15 +202,21 @@ class Analyse:
         return dict_b
 
     def dump_results(self, additional_tag=""):
+        '''Save the results inside a file
+        
+        Parameters:
+        -----------
+        additional_tag: `str`
+            Additional string to tag the specific file
+        '''
 
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 
         savepath = (
-            f"{self.save_path().split("/2")[0]}/"
+            f"{self.save_path().split(self.save_path().split("/")[-1])[0]}/"
             f"{additional_tag}{self.save_path().split("/")[-1]}"
         )
-        print(savepath)
         if os.path.isfile(savepath):
             cache_results = self.load_cache()
             self.all_res = self.combine_res_dicts(cache_results, self.all_res)
@@ -175,15 +227,30 @@ class Analyse:
             pickle.dump(self.all_res, f)
 
     def load_cache(self):
+        '''If the save_path is a file and not a directory,
+        load this file.
+        '''
         savepath = self.save_path()
         with open(savepath, "rb") as f:
             cache_results = pickle.load(f)
         return cache_results
 
     def find_cache_files(self):
-        return [os.path.join(self.cache_dir, x) for x in os.listdir(self.cache_dir) if ".pkl" in x]
+        '''Find all result files in the cache directory.
+        '''
+        return [os.path.join(
+            self.cache_dir, x
+        ) for x in os.listdir(self.cache_dir) if ".pkl" in x]
 
     def load_results(self, filename=None):
+        '''Load result files.
+
+        parameters
+        ----------
+        filename: `str|None`
+            If none, take the latest file in the cache directory.
+            If string, take the file pointed to by the path.
+        '''
 
         self.all_res = dict()
 
@@ -197,31 +264,14 @@ class Analyse:
             cache_dict = pickle.load(f)
             self.all_res = self.combine_res_dicts(self.all_res, cache_dict)
 
-        #self.clean_cache()
         self.dump_results()
-        self.fit_results()
         return self.all_res
 
     def clean_cache(self):
+        '''Clean the cache directory.
+        '''
         for file in self.find_cache_files():
             os.remove(file)
-
-    def fit_results(self):
-        for key, val in self.all_res[0.0].items():
-            self.sensitivity_thresholds[key] = np.median(val)
-            self.ts_fits[key] = GammaDistribution(val)
-
-    def discovery_threshold(self, hypo, sigma=5.):
-        return self.ts_fits[hypo].calculate_discovery_potential(sigma)
-
-    def find_overfluctuations(self, key, threshold, **kwargs):
-        pass
-
-    def find_sensitivity(self):
-        return self.find_overfluctuations("sensitivity", 0.9)
-
-    def find_discovery_potential(self, sigma=5.):
-        return self.find_overfluctuations("discovery", 0.5, sigma=sigma)
 
 
 

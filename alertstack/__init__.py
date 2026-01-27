@@ -464,7 +464,7 @@ class Hypothesis:
     fixed_catalogue: `alertstack.FixedCatalogue`
         The catalogue of neutrino events.
     min_E: `float`
-        Cut all neutrino events below this energy
+        Cut all neutrino events below this energy (in TeV)
         (useful to investigate the minimal sensitive energy)
     """
     name = None
