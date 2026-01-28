@@ -17,7 +17,7 @@ class PointSource:
     """
 
     def eval_spatial_pdf(self, ra, dec):
-        """Evaluate the spacial PDF for this neutrino event.
+        """Evaluate the spatial PDF for this neutrino event.
 
         Parameters
         ----------

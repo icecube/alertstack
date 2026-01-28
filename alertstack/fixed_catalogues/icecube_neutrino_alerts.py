@@ -15,6 +15,21 @@ import time
 
 
 class NeutrinoAlert(PointSource):
+    """Basic class for neutrino alerts (not healpix).
+    A bit obsolete. Currently, only neutrino alerts with healpix
+    maps are used. Might still be useful for tests.
+
+    Parameters
+    ----------
+    ra_deg: `float`
+        Right ascension of the best-fit direction in degrees.
+    dec_deg: `float`
+        Declination of the best-fit direction in degrees.
+    time_mjd: `float`
+        Modified Julian Date indicating the neutrino arrival time.
+    weight: `float`
+        Signalness.
+    """
 
     def __init__(self, ra_deg, dec_deg, time_mjd, weight=1.):
         self.ra_rad = np.radians(float(ra_deg))
@@ -24,31 +39,76 @@ class NeutrinoAlert(PointSource):
 
 
 class CircularisedNeutrinoAlert(NeutrinoAlert):
-    '''
-    Definition of all the necessary functions to run the analysis with the circularised neutrino alerts
+    '''Definition of all the necessary functions to run
+    the analysis with the circularised neutrino alerts.
+
+    Parameters
+    ----------
+    time_mjd: `float`
+        Modified Julian Date indicating the neutrino arrival time.
+    ra: `float`
+        Right ascension of the best-fit direction in degrees.
+    ra_delta: `float`
+        90% error on the right ascension in degrees.
+    dec: `float`
+        Declination of the best-fit direction in degrees.
+    dec_delta: `float`
+        90% error on the declination in degrees.
+    weight: `float`
+        Signalness.
     '''
 
     def __init__(self, time_mjd, ra, ra_delta, dec, dec_delta, weight=0.5):
         NeutrinoAlert.__init__(self, ra, dec, time_mjd, weight=weight)
         self.sigma = np.radians(
-            np.sqrt(0.25 * (ra_delta[0] ** 2 + ra_delta[1] ** 2 + dec_delta[0] ** 2 + dec_delta[1] ** 2)))
+            np.sqrt(
+                0.25 * (
+                    ra_delta[0] ** 2 + ra_delta[1] ** 2 + dec_delta[0] ** 2 + dec_delta[1] ** 2
+                )
+            )
+        )
 
     @staticmethod
     def gaussian(delta, sigma):
+        """Definition of a Gaussian function given the standard
+        deviation.
+
+        Parameters
+        ----------
+        delta: `float`
+            Distance from the Gaussian center.
+        sigma: `float`
+            Standard deviation of the Gaussian function.
+        """
         return (1. / (2. * np.pi * sigma ** 2.) *
                  np.exp(-0.5 * (delta / sigma) ** 2.))
 
     @staticmethod
     def bkg_spatial():
+        """Background probability assumed uniform.
+        """
         return 1. / (4. * np.pi)
 
     def eval_spatial_pdf(self, ra, dec):
+        """Evaluate the spatial PDF for this neutrino event.
+
+        Parameters
+        ----------
+        ra : `float`
+            Right Ascension [radiants].
+        dec : `float`
+            Declination [radiants].
+        """
         delta = self.angular_distance(
             ra, dec, self.ra_rad, self.dec_rad
         )
         return self.gaussian(delta, self.sigma)
 
     def simulate_position(self):
+        """Sample randomly a combination of ra and dec
+        following the probability map of the event.
+        In this case, the probability map is just a function.
+        """
         sim_ra = self.ra_rad + norm.rvs(scale=self.sigma)
         if sim_ra > 2*np.pi:
             sim_ra -= 2 * np.pi
@@ -60,9 +120,13 @@ class CircularisedNeutrinoAlert(NeutrinoAlert):
 
 
 class HealpixNeutrinoAlert(PointSource):
-    '''
-    Class of neutrino alerts that will fill the HealpixNeutrinoCatalogue.
+    '''Class of neutrino alerts that will fill the HealpixNeutrinoCatalogue.
     Contains the multiorder probability maps from IceCat-2.
+
+    Parameters
+    ----------
+    fits_path: `str`
+        Path where the multi-order probability maps are stored.
     '''
     def __init__(
         self,
@@ -107,64 +171,105 @@ class HealpixNeutrinoAlert(PointSource):
         self.weight = self.header['P_ASTRO']
         self.energy = self.header['ENERGY']
 
-    # Get the value of the probability from the neutrino likelihood skymap in the given coordinates 
+
     def signal_pdf(self, ra, dec):
+        """Get the value of the probability from the neutrino
+        likelihood skymap in the given coordinates.
+
+        Parameters
+        ----------
+        ra: `float`
+            Right ascension in radiants.
+        dec: `float`
+            Declination in radiants.
+        """
         colat = np.pi / 2. - dec
         long = ra
-        #compl_map = np.zeros(hp.nside2npix(self.nside))
-        #compl_map[self.pixels] = self.probs
         probdens = self.moc.get_interp_val(colat, long, lonlat=False)
         return probdens * mhp.nside2pixarea(self.nside)
-        # return hp.pixelfunc.get_interp_val(compl_map, colat, long, lonlat=False)
 
-    def bkg_spatial_pdf(self):
-        return 1./mhp.nside2npix(self.nside)
-        # return 1./hp.nside2npix(self.nside)
-
-    # Get coordinates for a point in a healpix grid
     def extract_ra_dec(self, index):
+        """Get coordinates for a point in a multi-order healpix grid
+
+        Parameters
+        ----------
+        index: int
+            Index of the pixel in the map. Attention! This is NOT
+            the healpix index for a specific nside, nor the uniq
+            for multi-order maps. It is specific to the single
+            multi-order map.
+        """
         nside, nestpix = mhp.uniq2nest(self.uniqs[index])
         (colat, ra) = mhp.pix2ang(nside, nestpix, nest=True)
-        # (colat, ra) = hp.pix2ang(self.nside, index)
         dec = np.pi / 2. - colat
-        # dec = colat
         return ra, dec
 
     def eval_spatial_pdf(self, ra, dec):
-        return self.signal_pdf(ra, dec) # /self.bkg_spatial_pdf()
+        """Evaluate the spatial PDF for this neutrino event.
 
-    # Simulate a random position (return coordinates) weighted by the neutrino PSF
+        Parameters
+        ----------
+        ra : `float`
+            Right Ascension [radiants].
+        dec : `float`
+            Declination [radiants].
+        """
+        return self.signal_pdf(ra, dec)
+
     def simulate_position(self):
+        """Sample randomly a combination of ra and dec
+        following the probability map of the event.
+        """
         ind = np.random.choice(a=self.pixels, p=self.probs)
         pos = self.extract_ra_dec(ind)
         return pos
 
 class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
+    '''This class contains a subset of alerts that were published
+    for the TXS paper. The catalog only includes circularised errors
+    and signalness = 0.5 for every alert.
     '''
-        This class contains a subset of alerts that were published for the TXS paper. The catalog 
-        only includes circularised errors and signalness = 0.5 for every alert. 
-    '''
+    
     @staticmethod
     def parse_data():
+        """Load the catalogue.
+        """
         nu_objs = []
-        with open(os.path.join(alertstack_data_dir, "catalog_of_alerts.txt"), "r") as f:
+        with open(os.path.join(
+            alertstack_data_dir, "catalog_of_alerts.txt"
+        ), "r") as f:
             for line in f.readlines():
                 if line[0] not in ["#", "\n"]:
                     if "retracted" not in line:
-                        vals = [x for x in line.split(" ") if x not in [""]]
+                        vals = [
+                            x for x in line.split(" ") if x not in [""]
+                        ]
                         time = vals[0]
                         ra = vals[1]
                         dec = vals[3]
-                        ra_delta = [float(x)/2.5 for x in vals[2][1:-1].split(",")]
-                        dec_delta = [float(x)/2.5 for x in vals[4][1:-2].split(",")]
+                        ra_delta = [
+                            float(x)/2.5 for x in vals[2][1:-1].split(",")
+                        ]
+                        dec_delta = [
+                            float(x)/2.5 for x in vals[4][1:-2].split(",")
+                        ]
                         ra_delta *= abs(np.cos(dec_delta))
 
-                        nu_objs.append(CircularisedNeutrinoAlert(time, ra, ra_delta, dec, dec_delta))
-
+                        nu_objs.append(CircularisedNeutrinoAlert(
+                            time, ra, ra_delta, dec, dec_delta
+                        ))
         return nu_objs
 
 
     def add_sim_alerts(self, n):
+        """Add simulated alerts.
+        Obsolete. May be useful in future testing? Consider removing it?
+
+        Parameters
+        ----------
+        n: `int`
+            number of alerts to simulate.
+        """
 
         nu_objs = []
 
@@ -175,7 +280,9 @@ class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
             time = 0.0
             ra = np.degrees(np.random.uniform() * 2 * np.pi)
             dec = np.degrees(np.arccos(2.*np.random.uniform() - 1) - np.pi/2.)
-            nu_objs.append(CircularisedNeutrinoAlert(time, ra, np.array(ra_delta), dec, np.array(dec_delta)))
+            nu_objs.append(CircularisedNeutrinoAlert(
+                time, ra, np.array(ra_delta), dec, np.array(dec_delta)
+            ))
 
         self.data += nu_objs
 
@@ -186,12 +293,14 @@ except KeyError:
                    "HealpixNeutrinoAlertCatalogue will raise an error.")
 
 class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
+    '''Catalog containing all the neutrino alerts in the alert catalog v2.
+    It loads the multi-order probability maps from IceCat-2. 
     '''
-        Catalog containing all the neutrino alerts in the alert catalog v2. It loads the healpix skymaps 
-        with the likelihood information from the Millipede scans. 
-    '''
+    
     @staticmethod
     def parse_data():
+        """Load the catalogue.
+        """
         nu_objs = []
 
         logging.info("Loading from {0}".format(skymap_dir))
