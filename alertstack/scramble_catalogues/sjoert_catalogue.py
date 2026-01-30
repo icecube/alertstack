@@ -133,6 +133,11 @@ class StrengthFluxWeightHypothesis(Hypothesis):
         ----------
         cat_data: `pandas.DataFrame`
             catalogue to weight
+        nu_at: `float`
+            Neutrino arrival time, in the form of modified julian date.
+        ignore_times: `bool`
+            If True, ignore the time window and weight only with the
+            bolometric fluence.
         """
 
         # This option is for the injections where we do not care about
