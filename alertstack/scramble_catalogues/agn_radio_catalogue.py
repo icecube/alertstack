@@ -12,12 +12,13 @@ import pandas as pd
 
 
 class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
-    '''
-    Loads Astrogeo RFC catalog and selects AGNs with S > 0.15 mJy.
+    '''Loads Astrogeo RFC catalog and selects AGNs with S > 0.15 mJy.
     '''
 
     @staticmethod
     def parse_data():
+        """Load the catalogue.
+        """
 
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
@@ -115,18 +116,29 @@ class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
 
     @staticmethod
     def set_gp_threshold():
+        """Set a cut in galactic latitude for the catalogue
+        (exclude the sources with a smaller latitude in absolute value).
+        """
         return 0.
 
     @staticmethod
     def set_min_declination():
+        """Set a cut in declination for the catalogue
+        (exclude the sources with a smaller declination).
+        """
         return -90.
 
     @staticmethod
     def set_nside():
-        # nside of the bkg distribution.
+        """Set the nside for the final resolution of the healpix map
+        describing the distribution of sources.
+        """
         return 128
 
     def set_bkg_distribution(self):
+        """Contains the logic necessary to generate an appropriate
+        background distribution for the specific catalogue.
+        """
         return  self.apply_cuts_on_bkg_distribution(
             self.generate_bkg_distribution_allsky(
                 self.data, nside=16, hd_nside=self.nside, sigma_smoothing=8.,
@@ -137,8 +149,18 @@ class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
 
 
 class AverageFluxWeightHypothesis(Hypothesis):
+    """Class for the hypothesis of constant emission proportional
+    to the X band flux.
+    """
     name = "average_radio_flux_weight"
 
     @staticmethod
     def weight_catalogue(cat_data):
+        """Weight the astrophysical sources according to the hypothesis.
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        """
         return cat_data['X band map']

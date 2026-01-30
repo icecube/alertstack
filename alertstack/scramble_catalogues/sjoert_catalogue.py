@@ -18,12 +18,13 @@ import astropy.io.ascii
 
 
 class AccretionFlaresSjoertCatalogue(AnisotropicExtragalacticCatalogue):
-    '''
-    Loads Sjoert's 63 accretion flares.
+    '''Loads Sjoert's 63 accretion flares.
     '''
 
     @staticmethod
     def parse_data():
+        """Load the catalogue.
+        """
 
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
@@ -87,20 +88,26 @@ class AccretionFlaresSjoertCatalogue(AnisotropicExtragalacticCatalogue):
 
     @staticmethod
     def set_gp_threshold():
-        # Cut of 8 deg same as in paper S. van Velzen at al. (2024).
+        """Cut of 8 deg same as in paper S. van Velzen at al. (2024).
+        """
         return 8.
 
     @staticmethod
     def set_min_declination():
-        # Minimal declination is set to the minimum of ZTF.
+        """Minimal declination is set to the minimum of ZTF.
+        """
         return -25.
 
     @staticmethod
     def set_nside():
-        # nside of the bkg distribution.
+        """nside of the bkg distribution.
+        """
         return 128
 
     def set_bkg_distribution(self):
+        """Contains the logic necessary to generate an appropriate
+        background distribution for the specific catalogue.
+        """
         return self.apply_cuts_on_bkg_distribution(
             self.generate_bkg_distribution_allsky(
                 self.data, nside=4, hd_nside=self.nside,
@@ -111,6 +118,9 @@ class AccretionFlaresSjoertCatalogue(AnisotropicExtragalacticCatalogue):
 
 
 class StrengthFluxWeightHypothesis(Hypothesis):
+    """Class for the hypothesis of neutrino emission proportional
+    to the probability ratio used in the paper S. van Velzen et al. (2024).
+    """
     name = "strength_flux_weight"
 
     @staticmethod
@@ -118,6 +128,11 @@ class StrengthFluxWeightHypothesis(Hypothesis):
         """
         Get same exact weights for the sources as the ones used in the
         paper S. van Velzen et al. (2024)
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
         """
 
         # This option is for the injections where we do not care about

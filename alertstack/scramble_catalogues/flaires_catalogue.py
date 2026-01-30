@@ -16,12 +16,13 @@ import astropy.io.ascii
 
 
 class FlairesCatalogue(AnisotropicExtragalacticCatalogue):
-    '''
-    Loads the 528 accretion flares used in Flairestack.
+    '''Loads the 528 accretion flares used in Flairestack.
     '''
 
     @staticmethod
     def parse_data():
+        """Load the catalogue.
+        """
 
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
@@ -101,33 +102,55 @@ class FlairesCatalogue(AnisotropicExtragalacticCatalogue):
 
     @staticmethod
     def set_gp_threshold():
+        """Set a cut in galactic latitude for the catalogue
+        (exclude the sources with a smaller latitude in absolute value).
+        """
         return 0.
 
     @staticmethod
     def set_min_declination():
-        # Minimal declination is set to the minimum of ZTF.
+        """Set a cut in declination for the catalogue
+        (exclude the sources with a smaller declination).
+        """
         return -90.
 
     @staticmethod
     def set_nside():
-        # nside of the bkg distribution.
+        """Set the nside for the final resolution of the healpix map
+        describing the distribution of sources.
+        """
         return 128
 
     def set_bkg_distribution(self):
+        """Contains the logic necessary to generate an appropriate
+        background distribution for the specific catalogue.
+        """
         return  self.generate_bkg_distribution_allsky(
                 self.data, nside=16, hd_nside=128, sigma_smoothing=8.,
         )
 
 class FluencebolHypothesis(Hypothesis):
+    """Class for the hypothesis of neutrino emission proportional
+    to the bolometric fluence of infrared flares.
+    """
     name = "bolometric_fluence_weight"
 
     @staticmethod
     def weight_catalogue(cat_data, nu_at, ignore_times=False):
-        """
-        Consider the bolometric luminosity [mJy s-1] as weight.
+        """Consider the bolometric luminosity [mJy s-1] as weight.
         The time window consits of 1 year before the IR peak.
         If the flare is not within 1 year after the neutrino the
         weight is set to zero.
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        nu_at: `float`
+            Neutrino arrival time, in the form of modified julian date.
+        ignore_times: `bool`
+            If True, ignore the time window and weight only with the
+            bolometric fluence.
         """
         # This option is for the injections where we do not care about
         # selecting with the time window
