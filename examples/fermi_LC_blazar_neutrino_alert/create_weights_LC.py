@@ -10,14 +10,24 @@ from alertstack.fixed_catalogues.icecube_neutrino_alerts import HealpixNeutrinoA
 from alertstack import alertstack_data_dir
 
 def get_lc(blazars):
-    '''
-    Get monthly light curves of blazars from Fermi 4LAC-DR2.
+    '''Get monthly light curves of blazars from Fermi 4LAC-DR2.
+
+    Parameters
+    ----------
+    blazars: `pandas.DataFrame`
+        The catalog of blazars for which the light curves are required.
     
     Returns
-    mask_lc: 0 if the value in values_lc is flux, 1 if it's an upper limit
-    values_lc: average integrated flux of photons or upper limits for each time bin
-    ts_lc: array of 2-tuples, first element is center of bin time interval (in MET)
-            and second is the likelihood TS
+    mask_lc: `list[list]`
+        list where each element is the mask for the correspondent blazar.
+        0 if the value in values_lc is flux, 1 if it's an upper limit.
+    values_lc: `list[list]`
+        list where each element is the light curve for the correspondent blazar.
+        average integrated flux of photons or upper limits for each time bin
+    ts_lc: `list[list]`
+        list where each element is another list, one for each blazar, having
+        as alements arrays of 2-tuples, first element is center
+        of bin time interval (in MET) and second is the likelihood TS
     
    
     If the light curve is not available, it will return None. 
@@ -79,16 +89,18 @@ def get_lc(blazars):
 
 
 def not_flux(c,t,b):
-    '''
-    Function to calculate weight if the neutrino arrived in a month where there is no data
+    '''Function to calculate weight if the neutrino arrived in a month where there is no data
     or it's just an upper limit. Checks the month before and after, if both have flux data the weight 
     is an average of both values. If only one of them is a data point, the assumed flux for the month 
     of interest is the same as that one.
     
     Parameters: 
-    c: center of the bin of neutrino arrival time
-    t: times of data points in the light curve
-    b: blazar
+    c: `float`
+        center of the bin of neutrino arrival time
+    t: `float`
+        times of data points in the light curve
+    b: `???`
+        Element from the catalog of blazars, with lightcurves.
     '''
     
     before = c - 30
@@ -122,14 +134,18 @@ def not_flux(c,t,b):
 def flux_at_nu_new(
     b,
     nu_at,
-    n_noflux,
-    n_flux,
-    n_ul,
-    n_gap,
 ):
-    '''
-    Get the value of the energy flux in the monthly time bin in which the neutrino arrived.
-    Take as parameters a blazar (b) and the neutrino arrival time (nu_at) and returns the flux.
+    '''Get the value of the energy flux in the monthly time bin
+    in which the neutrino arrived. Take as parameters a blazar (b)
+    and the neutrino arrival time (nu_at) and returns the flux.
+
+    Parameters
+    ----------
+    
+    b: `???`
+        Element from the catalog of blazars, with lightcurves.
+    nu_at: `float`
+        Neutrino arrival time.
     '''
     
     if b['values_lc'] != None:
@@ -141,37 +157,22 @@ def flux_at_nu_new(
         c = t[0] + ind*30
         
         if c in t: # not a gap:
-    
             whether_flux = b['mask_lc'][np.where(t == c)[0][0]]
-
             if whether_flux == 0: # it's flux
                 fl = b['values_lc'][np.where(t == c)[0][0]]
-                n_flux += 1
-
             else: # it's upper limit
-                
                 fl = not_flux(c,t,b)
-                n_ul += 1
-                
                 # value cannot be higher than upper limit or negative
-                if (fl > b['values_lc'][np.where(t == c)[0][0]]) and (b['values_lc'][np.where(t == c)[0][0]] > 0):
+                if (fl > b['values_lc'][np.where(t == c)[0][0]]) and (
+                    b['values_lc'][np.where(t == c)[0][0]] > 0
+                ):
                     fl = b['values_lc'][np.where(t == c)[0][0]]
-
         else: # in a gap
             fl = not_flux(c,t,b)
-            n_gap += 1
-
     else:
         fl = b['Energy_Flux100']
-        n_noflux += 1
         
-    return (
-        fl,
-        n_noflux,
-        n_flux,
-        n_ul,
-        n_gap,
-    )
+    return fl
 
 # Load catalogs
 blazar_cat = Fermi4FGLBlazarCatalogue()
@@ -179,7 +180,13 @@ nu_cat = HealpixNeutrinoAlertCatalogue()
 
 # Get monthly light curves for each blazar
 mask_lc, values_lc, ts_lc = get_lc(blazar_cat.data)
-new_dt = np.dtype(blazar_cat.data.to_records(index=False).dtype.descr + [('values_lc', list)] + [('mask_lc', list)] + [('ts_lc', list)])
+new_dt = np.dtype(
+    blazar_cat.data.to_records(
+        index=False
+    ).dtype.descr + [(
+        'values_lc', list
+    )] + [('mask_lc', list)] + [('ts_lc', list)]
+)
 b = np.zeros(blazar_cat.data.to_records(index=False).shape, dtype=new_dt)
 for i in blazar_cat.data.to_records(index=False).dtype.descr:
     b[i[0]] = blazar_cat.data[i[0]]
@@ -189,40 +196,12 @@ b['values_lc'] = values_lc
 b['ts_lc'] = ts_lc
 
 # Calculate weights
-n_noflux = 0
-n_flux = 0
-n_ul = 0
-n_gap = 0
 weights = {}
 for btmp in tqdm(b):
     val = {}
     for nu in nu_cat:
-        (
-            val[nu.time_mjd],
-            n_noflux,
-            n_flux,
-            n_ul,
-            n_gap,
-        ) = flux_at_nu_new(
-            btmp,
-            nu.time_mjd,
-            n_noflux,
-            n_flux,
-            n_ul,
-            n_gap,
-        )
+        val[nu.time_mjd] = flux_at_nu_new(btmp, nu.time_mjd)
     weights[btmp['Source_Name']] = val
-
-print(
-    "\n\n"
-    f"{n_noflux} blazars have no lightcurve.\n"
-    f"{n_flux} blazars have lightcurve and a flux measurement"
-    "at the neutrino arrival time.\n"
-    f"{n_ul} blazars have lightcurve and an upper limit"
-    "at the neutrino arrival time.\n"
-    f"{n_gap} blazars have lightcurve and a gap at neutrino arrival time."
-    "\n\n"
-)
     
 # Store values
 a = Path(alertstack_data_dir) / 'weights_LC.pkl' 
