@@ -1,0 +1,87 @@
+import argparse
+import matplotlib.pyplot as plt
+import os
+
+from alertstack.stats import TSHandler
+from examples.sjoert_accretion_flares_neutrino_alert import (
+    sjoert_accretion_flares_analysis
+)
+
+
+if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(
+        description='Plot TS distribution and sensitivity'
+    )
+    parser.add_argument(
+        '--input',
+        type=str,
+        default=(
+            "/data/user/gsommani/alertstack_results/"
+            "sjoert_n10000000_f0.25_s15_update_signalness.pkl"
+        ),
+        help = 'Results to use')
+    args = parser.parse_args()
+    '''
+    input: input file with the results to use.
+    '''
+
+    cwd = os.path.dirname(os.path.realpath(__file__))
+    figures_folder = os.path.join(cwd,"figures/")
+    
+    res = sjoert_accretion_flares_analysis.load_results(filename=args.input)
+    ts_handler = TSHandler(res, sjoert_accretion_flares_analysis)
+    ts_handler.find_thresholds_from_data()
+    key = list(ts_handler.sens_threshold.keys())[0]
+    val = res[0][key]
+    ts_handler.plot_ts(val, key, bins=30) 
+    plt.title(f"63 accretion flares + IceCat-2 -> {len(val):.1e} Scrambles")
+    plt.savefig(
+        figures_folder + "sjoert_scrambles_update_signalness",
+        bbox_inches="tight",
+        dpi=200
+    )
+    plt.savefig(
+        figures_folder + "sjoert_scrambles_update_signalness.pdf",
+        bbox_inches="tight",
+        dpi=200
+    )
+    plt.close()
+    ts_handler.extract_sens_dp(extent=0.15)
+    ts_handler.plot_sens_dp()
+    
+    plt.legend()
+    
+    plt.text(
+        ts_handler.x1 + 0.002, -0.03,
+        f"{ts_handler.x1*100:.1f}%",
+        color="tab:blue",
+        rotation=90
+    )
+    plt.text(
+        ts_handler.x2 + 0.002, -0.03,
+        f"{ts_handler.x2*100:.1f}%",
+        color="tab:orange",
+        rotation=90
+    )
+    plt.text(
+        ts_handler.x3 + 0.002, -0.03,
+        f"{ts_handler.x3*100:.1f}%",
+        color="tab:green",
+        rotation=90
+    )
+    
+    plt.text(-0.005, 0.91, "90%", color="black")
+    plt.text(-0.005, 0.51, "50%", color="black")
+    
+    plt.savefig(
+        figures_folder + "sjoert_sensitivity_5sigma_update_signalness",
+        bbox_inches="tight",
+        dpi=200
+    )
+    plt.savefig(
+        figures_folder + "sjoert_sensitivity_5sigma_update_signalness.pdf",
+        bbox_inches="tight",
+        dpi=200
+    )
+    plt.close()
