@@ -116,8 +116,17 @@ class Analyse:
         '''
         return self.run_trial(*p)
 
-    def iterate_run(self, injection_hypo=None, n_trials=100, fraction=1.0, n_steps=10,
-                    max_workers=min(32, os.cpu_count() + 4), chunksize=1):
+    def iterate_run(
+        self,
+        injection_hypo=None,
+        n_trials=100,
+        fraction=1.0,
+        n_steps=10,
+        max_workers=min(32, os.cpu_count() + 4),
+        chunksize=1,
+        additional_tag="",
+        progression_bar=True,
+    ):
         '''Run the analysis. It creates the list of trials based on the input parameters. 
         It calls the run_trial function and parses the fraction of astrophysical neutrinos to inject.  
         
@@ -136,6 +145,10 @@ class Analyse:
             tqdm max_workers parameter, setting number of cpus to be used
         chunksize: `int`
             tqdm chunksize parameter, Size of chunks sent to worker processes
+        additional_tag: `str`
+            additional tag to add to the filename for results
+        progression_bar: `bool`
+            Show in real-time the progress of the iterations on the terminal
         '''
 
         self.set_injection_hypo(injection_hypo)
@@ -150,16 +163,41 @@ class Analyse:
 
         # Run multiprocessing if circularised neutrino alerts, regular loop otherwise
         if 'Healpix' not in type(self.fixed_sources).__name__:
+            if not progression_bar: 
+                t0 = time.time()
             results = process_map(
                 self.run_trial_wrapper,
                 inputs,
                 max_workers=max_workers,
                 chunksize=chunksize,
+                disable=not progression_bar,
             )
+            if not progression_bar:
+                tot_time_s = time.time() - t0
+                tot_time_min = int(tot_time_s / 60)
+                tot_time_hrs = int(tot_time_min / 60)
+                tot_time_s = tot_time_s % 60
+                print(
+                    f"Iterations concluded! It took: {tot_time_hrs} h"
+                    f" {tot_time_min} min {tot_time_s:.2f} s"
+                )
         else:
             results = []
-            for i in tqdm(range(len(inputs))):
-                results.append(self.run_trial(inputs[i][0],inputs[i][1])) 
+            if progression_bar:
+                for i in tqdm(range(len(inputs))):
+                    results.append(self.run_trial(inputs[i][0],inputs[i][1])) 
+            else:
+                t0 = time.time()
+                for i in range(len(inputs)):
+                    results.append(self.run_trial(inputs[i][0],inputs[i][1]))
+                tot_time_s = time.time() - t0
+                tot_time_min = int(tot_time_s / 60)
+                tot_time_hrs = int(tot_time_min / 60)
+                tot_time_s = tot_time_s % 60
+                print(
+                    f"Iterations concluded! It took: {tot_time_hrs} h"
+                    f" {tot_time_min} min {tot_time_s:.2f} s"
+                )
 
         all_res = dict()
 
@@ -176,7 +214,7 @@ class Analyse:
 
         self.all_res = all_res
 
-        self.dump_results()
+        self.dump_results(additional_tag=additional_tag)
 
     @staticmethod
     def combine_res_dicts(dict_a, dict_b):
@@ -213,8 +251,11 @@ class Analyse:
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 
+
+        if additional_tag != "":
+            additional_tag += "_"
         savepath = (
-            f"{self.save_path().split(self.save_path().split("/")[-1])[0]}/"
+            f"{self.save_path().split(self.save_path().split("/")[-1])[0]}"
             f"{additional_tag}{self.save_path().split("/")[-1]}"
         )
         if os.path.isfile(savepath):
@@ -242,7 +283,7 @@ class Analyse:
             self.cache_dir, x
         ) for x in os.listdir(self.cache_dir) if ".pkl" in x]
 
-    def load_results(self, filename=None):
+    def load_results(self, filename=None, dump_results=False):
         '''Load result files.
 
         parameters
@@ -250,6 +291,8 @@ class Analyse:
         filename: `str|None`
             If none, take the latest file in the cache directory.
             If string, take the file pointed to by the path.
+        dump_results: `bool`
+            Dump or not the results after loading them
         '''
 
         self.all_res = dict()
@@ -264,7 +307,8 @@ class Analyse:
             cache_dict = pickle.load(f)
             self.all_res = self.combine_res_dicts(self.all_res, cache_dict)
 
-        self.dump_results()
+        if dump_results:
+            self.dump_results()
         return self.all_res
 
     def clean_cache(self):
