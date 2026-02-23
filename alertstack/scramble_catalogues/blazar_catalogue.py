@@ -98,6 +98,12 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
         (exclude the sources with a smaller latitude in absolute value).
         """
         return 10.
+        
+    @staticmethod
+    def set_min_declination():
+        """Set a cut in declination for the catalogue.
+        """
+        return -90.
 
 
 class AverageFluxWeightHypothesis(Hypothesis):
@@ -105,6 +111,7 @@ class AverageFluxWeightHypothesis(Hypothesis):
     (average flux as weight)
     """
     name = "average_flux_weight"
+    unit = "erg cm-2 s-1"
 
     @staticmethod
     def weight_catalogue(cat_data):
@@ -127,6 +134,7 @@ class BrightestFluxWeightHypothesis(Hypothesis):
     [Probably necessary for older tests. Should it be kept?]
     """
     name = "brightest_flux_weight"
+    unit = "erg cm-2 s-1"
 
     @staticmethod
     def weight_catalogue(cat_data):
@@ -148,6 +156,7 @@ class MonthlyFluxWeightHypothesis(Hypothesis):
     bin of the neutrino arrival time (nu_at).
     '''
     name = "monthly_flux_weight"
+    unit = "erg cm-2 s-1"
 
     @staticmethod
     def weight_catalogue(cat_data, nu_at):

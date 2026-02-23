@@ -468,6 +468,7 @@ class Hypothesis:
         (useful to investigate the minimal sensitive energy)
     """
     name = None
+    unit = None
 
     def __init__(self, fixed_catalogue, min_E=0.):
     #  min_E added to test minimum sensitive energy

@@ -95,7 +95,7 @@ class FlairesCatalogue(AnisotropicExtragalacticCatalogue):
         new_index = np.arange(len(acflares_df))
         acflares_df = acflares_df.set_index(new_index)
 
-        print("Found {0} sources in total".format(len(acflares_df)))
+        # print("Found {0} sources in total".format(len(acflares_df)))
         logging.info("Found {0} sources in total".format(len(acflares_df)))
 
         return acflares_df
@@ -134,6 +134,7 @@ class FluencebolHypothesis(Hypothesis):
     to the bolometric fluence of infrared flares.
     """
     name = "bolometric_fluence_weight"
+    unit = "mJy m-2"
 
     @staticmethod
     def weight_catalogue(cat_data, nu_at, ignore_times=False):

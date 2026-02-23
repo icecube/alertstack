@@ -153,6 +153,7 @@ class AverageFluxWeightHypothesis(Hypothesis):
     to the X band flux.
     """
     name = "average_radio_flux_weight"
+    unit = "mJy"
 
     @staticmethod
     def weight_catalogue(cat_data):
