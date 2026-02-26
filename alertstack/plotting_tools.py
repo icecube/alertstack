@@ -148,6 +148,8 @@ def plot_catalogue(
     tw=False,
     nside=None,
     final_pdf=False,
+    scramble=False,
+    scramble_size=20,
 ):
     """Plot a catalogue with an aitoff projection
 
@@ -167,6 +169,8 @@ def plot_catalogue(
         If the weight requires or not a time window
     nside: `int | None`
         Plot binning of sources with the desired nside
+    scramble: `bool`
+        Show the example of a scramble
     """
 
     catalogue = catalogue_obj.parse_data()
@@ -197,6 +201,16 @@ def plot_catalogue(
         norm="log",
         cmap="plasma"
     )
+    if scramble:
+        scrambled_cat = catalogue_obj.scramble()
+        plt.scatter(
+            prepare_ras_aitoff(scrambled_cat["ra_rad"]),
+            scrambled_cat["dec_rad"],
+            c="tab:blue",
+            s=scramble_size,
+            label="Scramble",
+            marker="x",
+        )
     plot_gp_coords(catalogue_obj.gp_threshold)
     plot_dec_cut(catalogue_obj.min_declination)
 

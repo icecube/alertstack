@@ -1,24 +1,22 @@
 import matplotlib.pyplot as plt
 import os
 
+from agn_radio_catalogue import AstrogeoAGNCatalogue
 from alertstack.fixed_catalogues.icecube_neutrino_alerts import (
     HealpixNeutrinoAlertCatalogue
 )
 from alertstack.plotting_tools import plot_catalogue
-from sjoert_catalogue import (
-    AccretionFlaresSjoertCatalogue,
-    StrengthFluxWeightHypothesis,
+from blazar_catalogue import (
+    Fermi4FGLBlazarCatalogue,
+    AverageFluxWeightHypothesis,
 )
 from flaires_catalogue import (
     FlairesCatalogue,
     FluencebolHypothesis,
 )
-from blazar_catalogue import (
-    Fermi4FGLBlazarCatalogue,
-    AverageFluxWeightHypothesis,
-)
-from agn_radio_catalogue import(
-    AstrogeoAGNCatalogue,
+from sjoert_catalogue import (
+    AccretionFlaresSjoertCatalogue,
+    StrengthFluxWeightHypothesis,
 )
 
 
@@ -62,6 +60,45 @@ if __name__ == "__main__":
     )
     plt.savefig(
         os.path.join(figures_folder,"sjoert_accr_flares_data.pdf"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+    plot_catalogue(
+        AccretionFlaresSjoertCatalogue(),
+        15,
+        "Nuclear Flares",
+        "63 Nuclear Flares",
+        scramble=True,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"sjoert_accr_flares_scramble_1"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+    plot_catalogue(
+        AccretionFlaresSjoertCatalogue(),
+        15,
+        "Nuclear Flares",
+        "63 Nuclear Flares",
+        scramble=True,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"sjoert_accr_flares_scramble_2"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+    plot_catalogue(
+        AccretionFlaresSjoertCatalogue(),
+        15,
+        "Nuclear Flares",
+        "63 Nuclear Flares",
+        scramble=True,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"sjoert_accr_flares_scramble_3"),
         dpi=150,
         bbox_inches="tight"
     )
@@ -135,6 +172,46 @@ if __name__ == "__main__":
     plot_catalogue(
         catalogue_obj,
         5,
+        "IR Flares",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"flaires_scramble_1"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "IR Flares",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"flaires_scramble_2"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "IR Flares",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"flaires_scramble_3"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+    plot_catalogue(
+        catalogue_obj,
+        5,
         "Nuclear Flares",
         "Flaires Catalog",
         nside=16,
@@ -198,6 +275,48 @@ if __name__ == "__main__":
         bbox_inches="tight"
     )
     plt.close()
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "Fermi Blazars",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"fermi_scramble_1"),
+        dpi=150,
+        bbox_inches="tight",
+    )
+    plt.close()
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "Fermi Blazars",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"fermi_scramble_2"),
+        dpi=150,
+        bbox_inches="tight",
+    )
+    plt.close()
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "Fermi Blazars",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"fermi_scramble_3"),
+        dpi=150,
+        bbox_inches="tight",
+    )
+    plt.close()
 
     from agn_radio_catalogue import AverageFluxWeightHypothesis
 
@@ -223,7 +342,6 @@ if __name__ == "__main__":
         bbox_inches="tight"
     )
     plt.close()
-    catalogue_obj = AstrogeoAGNCatalogue()
     plot_catalogue(
         catalogue_obj,
         5,
@@ -237,6 +355,48 @@ if __name__ == "__main__":
     )
     plt.savefig(
         os.path.join(figures_folder,"rfc_data.pdf"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "RFC Blazars",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"rfc_scramble_1"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "RFC Blazars",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"rfc_scramble_2"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+    plot_catalogue(
+        catalogue_obj,
+        5,
+        "RFC Blazars",
+        f"{len(catalogue_obj.parse_data())} sources",
+        scramble=True,
+        scramble_size=8,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"rfc_scramble_3"),
         dpi=150,
         bbox_inches="tight"
     )
