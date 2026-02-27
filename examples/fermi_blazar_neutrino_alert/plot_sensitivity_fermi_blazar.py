@@ -65,7 +65,7 @@ if __name__ == "__main__":
         rotation=90
     )
     plt.text(
-        ts_handler.x3 - 0.01, -0.03,
+        ts_handler.x3 - 0.005, -0.03,
         f"{ts_handler.x3*100:.1f}%",
         color="tab:green",
         rotation=90
