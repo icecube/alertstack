@@ -2,23 +2,24 @@
 
 ## Description
 
-Link to the wiki page: https://wiki.icecube.wisc.edu/index.php/Correlation_of_blazars_and_neutrino_alerts
-This stacking analysis aims to calculate the overall correlation between neutrino alerts and blazars. The list of neutrino alerts is fixed, using the real directions in each trial. The position of the sources to be correlated (e.g. blazars) is randomly scrambled instead. The angular uncertainties of the neutrino alerts are the best-guess Millipede errors.
+Link to the wiki page: https://wiki.icecube.wisc.edu/index.php/Stacking_analysis_with_the_new_realtime_alerts_contours
+
+This stacking analysis aims to calculate the overall correlation of neutrino alerts with blazars and tidal disruption events (TDEs). The list of neutrino alerts is fixed, using the real directions in each trial. The position of the sources to be correlated (e.g. blazars or TDEs) is randomly scrambled instead. The angular uncertainties of the neutrino alerts are the probability maps from [IceCat-2](https://wiki.icecube.wisc.edu/index.php/IceCat-2).
 
 The main code is called [alertstack](https://github.com/icecube/alertstack) and tests for correlations between neutrino alerts and catalogs. 
 
 ## Dataset
 
-- Neutrino catalog: v2 alert catalog (`/data/ana/realtime/alert_catalog_v2/`)
-- Blazar catalog: [4LAC-DR2](https://fermi.gsfc.nasa.gov/ssc/data/access/lat/4LACDR2/)
-- AGN catalog: [Atrogeo (RFC)](http://astrogeo.org/sol/rfc/rfc_2022a/)
+- Neutrino catalog: [IceCat-2](https://wiki.icecube.wisc.edu/index.php/IceCat-2) (`/data/ana/realtime/alert_catalog_v3/`)
+- Blazar catalog: [4LAC-DR3](https://fermi.gsfc.nasa.gov/ssc/data/access/lat/4LACDR3/)
+- AGN catalog: [Atrogeo (RFC)](http://astrogeo.org/sol/rfc/rfc_2025c/)
 
 ## Repository
 
 The repository is structured as follows:
 
 **General scripts**
-- `alertstack/data`: contains the Fermi catalog (4LAC-DR, `table-4LAC-DR2-h.fits`), the Astrogeo catalog (RFC 2022a, `rfc_2022a_cat.txt`), a file with information of the light curves of blazars at the neutrino arrival times (`weights_LC.pkl`) and a reduced sample of public alerts to run with the toy model.
+- `alertstack/data`: contains the various versions of the Fermi catalog (4LAC-DR1 is <code>table-4LAC.fits</code>, 4LAC-DR2 is <code>table-4LAC-DR2-h.fits</code>, and 4LAC-DR3 is <code>table-4LAC-DR3-h.fits</code>), the Astrogeo catalog (RFC 2020c, <code>rfc_2020c_cat.txt</code>; RFC 2022a, <code>rfc_2022a_cat.txt</code>; RFC 2025b, <code>rfc_2025b_cat.txt</code>; RFC 2025c, the one used in the anlysis, <code>rfc_2025c_cat.txt</code>), the 63 accretion flares from [S. van Velzen et al. (2024)](https://academic.oup.com/mnras/article/529/3/2559/7616944?login=true) (<code>sjoert_catalog.txt</code> and <code>ZTF_neoWISE_flares_acflares.dat</code> for the coordinates), the [Flaires catalog](https://www.aanda.org/articles/aa/full_html/2025/03/aa51340-24/aa51340-24.html) (<code>flaires.dat</code>), a file with information of the light curves of blazars at the neutrino arrival times (`weights_LC.pkl`) and a reduced sample of public alerts used by Plavin et al. (<code>plavin_alerts.txt</code>).
 - `alertstack/analyse.py`: defines class Analyse, that produces the background maps and runs the trials. Other useful functions such as saving and loading results. 
 - `alertstack/stats.py`: calculates discovery potential adjusting the data to a gamma distribution.
 
