@@ -20,7 +20,7 @@ The main code is called [alertstack](https://github.com/icecube/alertstack) and 
 
 The repository is structured as follows:
 
-**General scripts**
+**Catalog data**
 - `alertstack/data`: contains the various catalogs:
     - Several versions of the Fermi catalog:
         - 4LAC-DR1 (<code>table-4LAC.fits</code>);
@@ -36,6 +36,8 @@ The repository is structured as follows:
     - The [Flaires catalog](https://www.aanda.org/articles/aa/full_html/2025/03/aa51340-24/aa51340-24.html) (<code>flaires.dat</code>)
     - A file with information of the light curves of blazars at the neutrino arrival times (`weights_LC.pkl`)
     - A reduced sample of public alerts used by Plavin et al. (<code>plavin_alerts.txt</code> and <code>catalog_of_alerts.txt</code>).
+
+**General scripts**
 - `alertstack/analyse.py`: defines class Analyse, that produces the background maps and runs the trials. Other useful functions such as saving and loading results. 
 - `alertstack/stats.py`: calculates discovery potential adjusting the data to a gamma distribution.
 
