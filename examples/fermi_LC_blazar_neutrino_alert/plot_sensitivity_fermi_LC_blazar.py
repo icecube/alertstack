@@ -16,7 +16,7 @@ if __name__ == "__main__":
         default=(
             "/data/user/gsommani/alertstack-icecube/examples/"
             "fermi_LC_blazar_neutrino_alert/cache/"
-            "february_update_2026_02_16-10_58_48.pkl"
+            "february_monthly_2026_02_27-13_02_24.pkl"
         ),
         help = 'Results to use')
     args = parser.parse_args()

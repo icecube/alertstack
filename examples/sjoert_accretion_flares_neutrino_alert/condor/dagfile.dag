@@ -1,0 +1,14 @@
+# BEGIN META
+# END META
+# BEGIN NODES AND EDGES
+JOB segment:0 segment.sub
+VARS segment:0 i="0"
+JOB segment:1 segment.sub
+VARS segment:1 i="1"
+JOB segment:2 segment.sub
+VARS segment:2 i="2"
+JOB segment:3 segment.sub
+VARS segment:3 i="3"
+JOB segment:4 segment.sub
+VARS segment:4 i="4"
+# END NODES AND EDGES

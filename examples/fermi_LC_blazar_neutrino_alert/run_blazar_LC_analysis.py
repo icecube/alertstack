@@ -11,12 +11,12 @@ from examples.fermi_LC_blazar_neutrino_alert import (
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Calculate TS distributions')
-    parser.add_argument('--n_trials', type=int, default=10000,
+    parser.add_argument('--n_trials', type=int, default=20000,
                             help = 'Number of trials')
     parser.add_argument('--fraction', type=float, default=0.175,
                             help = 'Maximum fraction of neutrinos to be correlated')
     parser.add_argument('--n_steps', type=int, default=10, help ='Number of steps')
-    parser.add_argument('--tag', type=str, default=None, help ='Additional tag')
+    parser.add_argument('--tag', type=str, default="", help ='Additional tag')
     args = parser.parse_args()
     
     '''

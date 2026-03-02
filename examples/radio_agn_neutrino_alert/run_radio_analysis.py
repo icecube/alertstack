@@ -11,7 +11,7 @@ from examples.radio_agn_neutrino_alert import (
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Calculate TS distributions')
-    parser.add_argument('--n_trials', type=int, default=10000,
+    parser.add_argument('--n_trials', type=int, default=20000,
                             help = 'Number of trials')
     parser.add_argument('--fraction', type=float, default=0.2,
                             help = 'Maximum fraction of neutrinos to be correlated')

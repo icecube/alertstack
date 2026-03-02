@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser.add_argument('--fraction', type=float, default=0.5,
                             help = 'Maximum fraction of neutrinos to be correlated')
     parser.add_argument('--n_steps', type=int, default=10, help ='Number of steps')
-    parser.add_argument('--tag', type=str, default=None, help ='Additional tag')
+    parser.add_argument('--tag', type=str, default="", help ='Additional tag')
     args = parser.parse_args()
     
     '''
