@@ -9,6 +9,8 @@ from alertstack.scramble_catalogues.blazar_catalogue import Fermi4FGLBlazarCatal
 from alertstack.fixed_catalogues.icecube_neutrino_alerts import HealpixNeutrinoAlertCatalogue
 from alertstack import alertstack_data_dir
 
+erg_to_MeV = 6.24151e5
+
 def get_lc(blazars):
     '''Get monthly light curves of blazars from Fermi 4LAC-DR2.
 
@@ -170,7 +172,7 @@ def flux_at_nu_new(
         else: # in a gap
             fl = not_flux(c,t,b)
     else:
-        fl = b['Energy_Flux100']
+        fl = b['Energy_Flux100'] * erg_to_MeV  # Convert to same unit as lightcurves.
         
     return fl
 
