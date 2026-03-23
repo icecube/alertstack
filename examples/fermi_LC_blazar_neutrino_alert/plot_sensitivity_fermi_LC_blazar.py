@@ -16,9 +16,15 @@ if __name__ == "__main__":
         default=(
             "/data/user/gsommani/alertstack-icecube/examples/"
             "fermi_LC_blazar_neutrino_alert/cache/"
-            "february_monthly_2026_02_27-13_02_24.pkl"
+            "march_update_2026_03_04-11_17_42.pkl"
         ),
         help = 'Results to use')
+    parser.add_argument(
+        '--run',
+        type=int,
+        default=142135,
+        help ='Last run to consider for the neutrinos'
+    )
     args = parser.parse_args()
     '''
     input: input file with the results to use.
@@ -28,7 +34,7 @@ if __name__ == "__main__":
     figures_folder = os.path.join(cwd,"figures/")
     
     res = blazar_analysis.load_results(filename=args.input)
-    ts_handler = TSHandler(res, blazar_analysis)
+    ts_handler = TSHandler(res, blazar_analysis, max_run=args.run)
     gd = ts_handler.find_thresholds_gamma()
     key = list(ts_handler.sens_threshold.keys())[0]
     val = res[0][key]
@@ -47,10 +53,10 @@ if __name__ == "__main__":
         dpi=200
     )
     plt.close()
-    ts_handler.extract_sens_dp(extent=0.15)
+    ts_handler.extract_sens_dp(extent=0.175)
     ts_handler.plot_sens_dp()
     
-    plt.legend()
+    plt.legend(loc=(-0.6, 0))
     
     plt.text(
         ts_handler.x1 + 0.001, 0.95,
