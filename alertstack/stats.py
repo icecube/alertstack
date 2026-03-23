@@ -22,12 +22,15 @@ class TSHandler:
     PROB_3S = 1.35e-3
     PROB_5S = 2.87e-7
 
-    def __init__(self, results, analysis):
+    def __init__(self, results, analysis, max_run=142135):
         self.results = results
         self.sens_threshold = dict()
         self.disc_3_threshold = dict()
         self.disc_5_threshold = dict()
-        tmp = [i.weight for i in analysis.fixed_sources]
+        runs = np.array([nu.runid for nu in analysis.fixed_sources])
+        tmp = np.array(
+            [i.weight for i in analysis.fixed_sources]
+        )[runs<=max_run]
         self.avg_signalness = np.mean(tmp)
         self.n_events = len(tmp)
         self.x1 = None

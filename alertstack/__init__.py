@@ -457,7 +457,7 @@ def is_outside_GP(ra,dec, threshold=10.0):
     return abs(gal.b) > threshold_GP
 
 class Hypothesis:
-    """Basic class hypotheses to be tested.
+    """Basic class for hypotheses to be tested.
 
     Parameters
     ----------
@@ -466,20 +466,23 @@ class Hypothesis:
     min_E: `float`
         Cut all neutrino events below this energy (in TeV)
         (useful to investigate the minimal sensitive energy)
+    max_run: `int`
+        Remove all neutrino alerts after this run       
     """
     name = None
     unit = None
 
-    def __init__(self, fixed_catalogue, min_E=0.):
+    def __init__(self, fixed_catalogue, min_E=0., max_run=200000):
     #  min_E added to test minimum sensitive energy
         self.fixed_catalogue = fixed_catalogue
 
         nu_energies = np.array([nu.energy for nu in fixed_catalogue])
+        nu_runids = np.array([nu.runid for nu in fixed_catalogue])
         energymask = nu_energies >= min_E
-        
+        runmask = nu_runids <= max_run
         
         if self.name == 'strength_flux_weight':
-            # Select only neutrinos which can be coincident with the 63 accretion flares
+            # Select only neutrinos that can be coincident with the 63 accretion flares
             nutimes = np.array(
                 [nu.time_mjd for nu in fixed_catalogue]
             )
@@ -496,7 +499,9 @@ class Hypothesis:
                 (nutimes >= minflarestime) & (nutimes <= maxflarestime)
             )
             spatialmask = (nudecs + nudecsplus) > -25.
-            self.fixed_catalogue = np.array(fixed_catalogue.data)[timemask & spatialmask & energymask]
+            self.fixed_catalogue = np.array(
+                fixed_catalogue.data
+            )[timemask & spatialmask & energymask]
             # Code to investigate which neutrinos have been selected. Decomment to use it.
             # selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
             # selected_nus.sort()
@@ -520,7 +525,7 @@ class Hypothesis:
             # for i, nu in enumerate(selected_nus):
             #     print(i, nu)
         else:
-            self.fixed_catalogue = np.array(fixed_catalogue.data)[energymask]
+            self.fixed_catalogue = np.array(fixed_catalogue.data)[energymask & runmask]
             
         self.source_weights = np.array(
             [source.eval_source_weight() for source in self.fixed_catalogue]

@@ -62,7 +62,7 @@ class Analyse:
         self.pid = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return os.path.join(self.cache_dir, "{0}.pkl".format(self.pid))
 
-    def set_injection_hypo(self, injection_hypo, min_E=0):
+    def set_injection_hypo(self, injection_hypo, min_E=0, max_run=200000):
         """Set the hypothesis that will determine how the injections will work.
     
         Parameters
@@ -72,8 +72,10 @@ class Analyse:
         min_E: `float`
             Cut all neutrino events below this energy (in TeV)
             (useful to investigate the minimal sensitive energy)
+        max_run: `int`
+            Remove all neutrino alerts after this run   
         """
-        self._injection_hypo = injection_hypo(self.fixed_sources, min_E)
+        self._injection_hypo = injection_hypo(self.fixed_sources, min_E, max_run)
 
     def run_trial(self, fraction=0.0, random_seed=None):
         '''Run individual trial. This function scrambles the catalog sources,
@@ -126,6 +128,7 @@ class Analyse:
         chunksize=1,
         additional_tag="",
         progression_bar=True,
+        max_run=200000
     ):
         '''Run the analysis. It creates the list of trials based on the input parameters. 
         It calls the run_trial function and parses the fraction of astrophysical neutrinos to inject.  
@@ -149,9 +152,11 @@ class Analyse:
             additional tag to add to the filename for results
         progression_bar: `bool`
             Show in real-time the progress of the iterations on the terminal
+        max_run: `int`
+            Remove all neutrino alerts after this run   
         '''
 
-        self.set_injection_hypo(injection_hypo)
+        self.set_injection_hypo(injection_hypo, max_run=max_run)
 
         # Create list of fractions to loop over. Includes ten times as many background trials.
         fs = [0.0 for _ in range(n_trials * 10)]
