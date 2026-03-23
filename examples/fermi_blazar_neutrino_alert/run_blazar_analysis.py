@@ -10,13 +10,33 @@ from examples.fermi_blazar_neutrino_alert import (
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Calculate TS distributions')
-    parser.add_argument('--n_trials', type=int, default=20000,
-                            help = 'Number of trials')
-    parser.add_argument('--fraction', type=float, default=0.175,
-                            help = 'Maximum fraction of neutrinos to be correlated')
-    parser.add_argument('--n_steps', type=int, default=10, help ='Number of steps')
-    parser.add_argument('--tag', type=str, default="", help ='Additional tag')
+    parser = argparse.ArgumentParser(
+        description='Calculate TS distributions'
+    )
+    parser.add_argument(
+        '--n_trials',
+        type=int,
+        default=20000,
+        help = 'Number of trials'
+    )
+    parser.add_argument(
+        '--fraction',
+        type=float,
+        default=0.175,
+        help = 'Maximum fraction of neutrinos to be correlated'
+    )
+    parser.add_argument(
+        '--n_steps', type=int, default=10, help ='Number of steps'
+    )
+    parser.add_argument(
+        '--tag', type=str, default="", help ='Additional tag'
+    )
+    parser.add_argument(
+        '--run',
+        type=int,
+        default=142135,
+        help ='Last run to consider for the neutrinos'
+    )
     args = parser.parse_args()
     
     '''
@@ -24,6 +44,7 @@ if __name__ == "__main__":
     will be run as background trials
     fraction: Maximum fraction of astrophysical neutrinos to be injected
     n_steps: Number of different injection steps to test, between 0 and fraction.
+    run: Last run to consider for the neutrinos.
     '''
 
     logging.getLogger().setLevel("INFO")
@@ -38,5 +59,6 @@ if __name__ == "__main__":
         n_steps=args.n_steps,
         additional_tag=args.tag,
         chunksize=chunksize,
-        progression_bar=True
+        progression_bar=True,
+        max_run=args.run
     )

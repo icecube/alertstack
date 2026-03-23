@@ -19,16 +19,23 @@ if __name__ == "__main__":
             "february_update_2026_02_27-11_49_46.pkl"
         ),
         help = 'Results to use')
+    parser.add_argument(
+        '--run',
+        type=int,
+        default=142135,
+        help ='Last run to consider for the neutrinos'
+    )
     args = parser.parse_args()
     '''
     input: input file with the results to use.
+    run: Last run to consider for the neutrinos.
     '''
 
     cwd = os.path.dirname(os.path.realpath(__file__))
     figures_folder = os.path.join(cwd,"figures/")
     
     res = blazar_analysis.load_results(filename=args.input)
-    ts_handler = TSHandler(res, blazar_analysis)
+    ts_handler = TSHandler(res, blazar_analysis, max_run=args.run)
     gd = ts_handler.find_thresholds_gamma()
     key = list(ts_handler.sens_threshold.keys())[0]
     val = res[0][key]
@@ -47,7 +54,7 @@ if __name__ == "__main__":
         dpi=200
     )
     plt.close()
-    ts_handler.extract_sens_dp(extent=0.15)
+    ts_handler.extract_sens_dp(extent=0.175)
     ts_handler.plot_sens_dp(data_derived=False)
     
     plt.legend(loc=(-0.6, 0))
