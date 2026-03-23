@@ -156,7 +156,7 @@ class MonthlyFluxWeightHypothesis(Hypothesis):
     bin of the neutrino arrival time (nu_at).
     '''
     name = "monthly_flux_weight"
-    unit = "erg cm-2 s-1"
+    unit = "MeV cm-2 s-1"
 
     @staticmethod
     def weight_catalogue(cat_data, nu_at):
