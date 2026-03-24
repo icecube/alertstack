@@ -162,6 +162,25 @@ Sensitivity at ? of flux, expectation of ?/393 = ?
 
 The various plots for each specific analysis will be saved in `examples/??_neutrino_alert/figures/`.
 
+## Run on NPX
+
+The three analyses `fermi_blazar_neutrino_alert`, `fermi_LC_blazar_neutrino_alert`, and `radio_agn_neutrino_alert` do not require computational resources on the NPX cluster to estimate the sensitivity and discovery potentials. Their TS distribution correctly follows a gamma distribution. Therefore, this can be used to estimate everything. The situation is different with the TDE analyses: `sjoert_accretion_flares_neutrino_alert` and `flaires_neutrino_alert`. In these two analyses, the number of expected coincidences is very low, and the TS distribution enters a low-statistic regime in which the gamma distribution no longer accurately describes reality. For this reason, the distribution for these two analyses is estimated instead by performing a very high number of scrambles. To perform these scrambles, help from the NPX cluster is necessary.
+
+To use the NPX cluster, first run
+
+```
+python examples/???_neutrino_alert/dag_creator_???.py
+```
+
+This will create the dagman file in `examples/???_neutrino_alert/condor/`. As input, you can also insert  `--n_trials`, `--fraction`, and `--n_steps`. In this case, `--n_trials` specifies the number of trials performed for each job. Furthermore, two additional flags are available: `--n_jobs` and `--n_cpus`. `--n_jobs` specifies the number of jobs to use, while `--n_cpus` indicates the number of CPUs to request per job. To test if everything works, you could use `--n_trials 1000`.
+
+Once the dagman file is created, copy all the files inside `examples/???_neutrino_alert/condor/` in your scratch folder and run with 
+
+```
+condor_submit_dag dagfile.dag
+```
+
+As soon as the jobs are finished, you should see the results in `examples/???_neutrino_alert/cache/`. This is not yet the end of the story. To see the final TS distribution and sensitivity, you should first combine the several results (1 file per job) using the `examples/???_neutrino_alert/ts_unifier_???.py` script. This script requires the same `--n_trials`, `--fraction`, and `--n_steps` used for the dagman file, plus the eventual `--tag` used. The script will combine the results in one single file.
 
 When you are ready to unblind the analysis, you can run
 
