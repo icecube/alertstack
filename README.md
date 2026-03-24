@@ -85,6 +85,8 @@ Two scripts are available to investigate the catalogs:
 
 To plot all test-statistic distributions, discover potentials, and sensitivities with a single command, the script `examples/plot_all.py` is available.
 
+Moreover, the script `examples/compare_sensitivities.py` compares sensitivities with [the older version of this analysis](https://github.com/icecube/wg-nu-sources/tree/main/2022_Fermi_Blazars_Alerts_Stacking).
+
 
 ## Install locally
 
@@ -134,9 +136,11 @@ To calculate the sensitivity and discovery potential of the analyses, do
 
 This will run the analysis locally with the necessary parameters to obtain the results in the wiki page. You can also select the number of trials, the maximum fraction of neutrino alerts to correlate, and the number of steps to consider for the fraction with `--n_trials`, `--fraction`, and `--n_steps`. The code will calculate a TS distribution with `n_trials` trials (10x more for the background) for each fraction of injected astrophysical neutrinos, from 0.0 to `fraction`. For each TS distribution, the injection fraction is calculated as (step number) * `fraction`/`n_steps`.
 
-With the default values (different for each analysis), the running time is of some hours. With the recommended values, if you just want to test if it works (`n_trials = 25`, `fraction = 0.25`, and `n_steps = 10`), it will take a few seconds (but the results will be statistically limited, this is just to get approximate values). Taking the latest set of parameters, the script will run 250 background trials and 25 trials for injections of 0.1, 0.2, 0.3, and 0.4 times the neutrino flux.
+Additionally, two further parameters are available: `--tag` and `--run`. `--tag` specifies a tag to save the results, to make them recognizable. `--run` is for testing. It specifies the last run to consider in the calculations. This can be useful to compare with older results.
 
-The script will not output anything. To investigate the distribution, the sensitivity, and the discovery potential, you should run
+With the default values (different for each analysis), the running time is of some hours. With the recommended values, if you just want to test if it works (`n_trials = 25`, `fraction = 0.25`, and `n_steps = 10`), it will take a few seconds (but the results will be statistically limited; this is just to get approximate values). With this set of parameters, the script will run 250 background trials and 25 trials for injections of 0.1, 0.2, 0.3, and 0.4 times the neutrino flux.
+
+The script will not output anything. To investigate the distribution, sensitivity, and discovery potential, you should run (after you export the path to the neutrino maps and activate your virtual environment).
 
 ```
 python examples/???_neutrino_alert/plot_sensitivity_???.py --input PATH-TO-TS-DISTRIBUTION
@@ -144,21 +148,19 @@ python examples/???_neutrino_alert/plot_sensitivity_???.py --input PATH-TO-TS-DI
 
 where `PATH-TO-TS-DISTRIBUTION` indicates the path to the `.pkl` file with the test-statistic distribution (usually in `examples/???_neutrino_alert/cache/NAME_FILE.pkl`, check the folder for the exact name). The default parameters in `plot_sensitivity_???.py` will reproduce the results in the wiki.
 
-The output would include the following lines at the end:
+The output should also include the following lines at the end (the actual total number of neutrinos and average signalness may change from one analysis to another):
 
 ```
-------- Sensitivity and discovery potential with 275 neutrino alerts (average signalness: 45.1 %) --------
+------- Sensitivity and discovery potential with 393 neutrino alerts (average signalness: 46.8 %) --------
 
-Sensitivity at ? of flux, expectation of ?/275 = ?
-3 Sigma discovery at ? of flux, expectation of ?/275 = ?
-5 Sigma discovery at ? of flux, expectation of ?/275 = ?
+Sensitivity at ? of flux, expectation of ?/393 = ?
+3 Sigma discovery at ? of flux, expectation of ?/393 = ?
+5 Sigma discovery at ? of flux, expectation of ?/393 = ?
 
 ----------------------------------------------------------------------------------------------------------
 ```
 
-A plot of the TS distribution of the background and the sensitivity and discovery potentials will be saved in `examples/??_neutrino_alert/cache/ts_bkg.png`.
-
-In `examples/fermi_blazar_neutrino_alert/blazar_toy_example.ipynb` you can run a toy version of the code using a limited sample of circularized public errors instead of the likelihood maps.
+The various plots for each specific analysis will be saved in `examples/??_neutrino_alert/figures/`.
 
 
 When you are ready to unblind the analysis, you can run
