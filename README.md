@@ -172,7 +172,7 @@ To use the NPX cluster, first run
 python examples/???_neutrino_alert/dag_creator_???.py
 ```
 
-This will create the dagman file in `examples/???_neutrino_alert/condor/`. As input, you can also insert  `--n_trials`, `--fraction`, and `--n_steps`. In this case, `--n_trials` specifies the number of trials performed for each job. Furthermore, two additional flags are available: `--n_jobs` and `--n_cpus`. `--n_jobs` specifies the number of jobs to use, while `--n_cpus` indicates the number of CPUs to request per job. To test if everything works, you could use `--n_trials 1000`.
+This will create the dagman file in `examples/???_neutrino_alert/condor/`. As input, you can also insert  `--n_trials`, `--fraction`, and `--n_steps`. In this case, `--n_trials` specifies the number of trials performed for each job. Furthermore, two additional flags are available: `--n_jobs` and `--n_cpus`. `--n_jobs` specifies the number of jobs to use, while `--n_cpus` indicates the number of CPUs to request per job. The default settings reproduce the results in the wiki. To test if everything works, you could use `--n_trials 1000`.
 
 Once the dagman file is created, copy all the files inside `examples/???_neutrino_alert/condor/` in your scratch folder and run with 
 
