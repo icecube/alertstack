@@ -87,7 +87,7 @@ class TSHandler:
                     done_5s = True
 
     
-    def plot_ts(self, val, key, gd=None, bins=30, density=True):
+    def plot_ts(self, val, key, gd=None, bins=30, density=True, ts=None):
         '''plot TS + sensitivity and disc potential
 
         Parameters
@@ -100,8 +100,10 @@ class TSHandler:
             If given, gamma distribution that fits the TS
         bins: `int`
             Number of bins for the histogram
-        density: `bool
+        density: `bool`
             Shows density or absolute number of scrambles
+        ts: `float | None`
+            real test statistic to plot
         '''
         sens = self.sens_threshold[key]
         disc_3 = self.disc_3_threshold[key]
@@ -129,7 +131,16 @@ class TSHandler:
             )
             plt.plot(x_range, gd.dist.pdf(x_range))
             plt.ylim(gd.dist.pdf(disc_5)/4, max(counts)*4)
-        plt.errorbar(bins_centers, counts, errs, bins_widths, linestyle="", color="black")
+        if ts is not None:
+            plt.axvline(ts, color="red", linewidth=2, label="Real data")
+        plt.errorbar(
+            bins_centers,
+            counts,
+            errs,
+            bins_widths,
+            linestyle="",
+            color="black",
+        )
         ylim = plt.gca().get_ylim() 
         plt.xlabel('TS')
         plt.yscale('log')

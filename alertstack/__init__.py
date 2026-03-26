@@ -633,7 +633,7 @@ class Hypothesis:
             
             if savedata is not None:
                 ind = np.argmax(source_weight * spatial_pdf_mask * cat_weights / density)
-                final.append([source.pkl_path, cat_data[ind]['Source_Name'], np.log(prob)])
+                final.append([source.fits_path, cat_data.at[ind, 'Source_Name'], np.log(prob)])
             
         if savedata is not None:
             with open(os.path.join(savedata,"correlations.pkl"), "wb") as fp:

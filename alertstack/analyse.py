@@ -219,7 +219,9 @@ class Analyse:
 
         self.all_res = all_res
 
-        self.dump_results(additional_tag=additional_tag)
+        savepath = self.dump_results(additional_tag=additional_tag)
+
+        return savepath
 
     @staticmethod
     def combine_res_dicts(dict_a, dict_b):
@@ -271,6 +273,8 @@ class Analyse:
 
         with open(savepath, "wb") as f:
             pickle.dump(self.all_res, f)
+
+        return savepath
 
     def load_cache(self):
         '''If the save_path is a file and not a directory,
