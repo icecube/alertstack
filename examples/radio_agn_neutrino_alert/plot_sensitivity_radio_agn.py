@@ -16,7 +16,7 @@ if __name__ == "__main__":
         default=(
             "/data/user/gsommani/alertstack-icecube/examples/"
             "radio_agn_neutrino_alert/cache/"
-            "february_update_2026_02_27-12_01_55.pkl"
+            "february_update_2026_03_02-09_56_36.pkl"
         ),
         help = 'Results to use')
     parser.add_argument(
