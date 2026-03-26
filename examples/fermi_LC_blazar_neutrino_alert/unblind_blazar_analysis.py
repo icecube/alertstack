@@ -7,10 +7,10 @@ import os
 from alertstack.analyse import Analyse
 from alertstack.scramble_catalogues.blazar_catalogue import (
     Fermi4FGLBlazarCatalogue,
-    AverageFluxWeightHypothesis,
+    MonthlyFluxWeightHypothesis,
 )
 from alertstack.stats import GammaDistribution, TSHandler
-from examples.fermi_blazar_neutrino_alert import blazar_analysis
+from examples.fermi_LC_blazar_neutrino_alert import blazar_analysis
 from scipy import stats
 
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -42,8 +42,8 @@ if __name__ == "__main__":
         type=str,
         default=(
             "/data/user/gsommani/alertstack-icecube/examples/"
-            "fermi_blazar_neutrino_alert/cache/"
-            "february_update_2026_02_27-11_49_46.pkl"
+            "fermi_LC_blazar_neutrino_alert/cache/"
+            "february_monthly_2026_03_02-12_18_21.pkl"
         ),
         help = 'Results to use. If None, recalculates the results.'
     )
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     if args.input == 'None':
         inputfile = blazar_analysis.iterate_run(
             n_trials=args.n_trials,
-            injection_hypo=AverageFluxWeightHypothesis,
+            injection_hypo=MonthlyFluxWeightHypothesis,
             fraction=args.fraction,
             n_steps=args.n_steps,
             chunksize=10,
@@ -92,16 +92,16 @@ if __name__ == "__main__":
     val_bkg = all_res[0][key]
     ts_handler.plot_ts(val_bkg, key, gd=gd, bins=30, ts=ts) # Plot TS distribution of bkg + TS_data
 
-    plt.title(f"4LAC-DR3 (12y integrated flux) + IceCat-2 -> {len(
+    plt.title(f"4LAC-DR3 (monthly binned) + IceCat-2 -> {len(
         val_bkg
     ):.1e} Scrambles")
     plt.savefig(
-        figures_folder + "4LACDR3_integrated_scrambles_result",
+        figures_folder + "4LACDR3_monthly_scrambles_result",
         bbox_inches="tight",
         dpi=200
     )
     plt.savefig(
-        figures_folder + "4LACDR3_integrated_scrambles_result.pdf",
+        figures_folder + "4LACDR3_monthly_scrambles_result.pdf",
         bbox_inches="tight",
         dpi=200
     )
