@@ -118,7 +118,6 @@ class TSHandler:
             counts =  counts / db / counts_sum
             errs = np.sqrt(counts * db * counts_sum) / (db * counts_sum)
             plt.ylabel("Density")
-            plt.ylim(min(counts)/8, max(counts)*4)
         else:
             errs = np.sqrt(counts)
             plt.ylabel("Scrambles")
@@ -141,7 +140,7 @@ class TSHandler:
             linestyle="",
             color="black",
         )
-        ylim = plt.gca().get_ylim() 
+        plt.ylim(min(counts[counts!=0.])/8, max(counts[counts!=0.])*4)
         plt.xlabel('TS')
         plt.yscale('log')
         plt.axvline(sens, color = 'tab:orange', ls='--', label='Sensitivity')
