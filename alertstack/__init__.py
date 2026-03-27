@@ -632,8 +632,25 @@ class Hypothesis:
             lh_array += np.log(prob) # TS = log(S/B)
             
             if savedata is not None:
-                ind = np.argmax(source_weight * spatial_pdf_mask * cat_weights / density)
-                final.append([source.fits_path, cat_data.at[ind, 'Source_Name'], np.log(prob)])
+                if density != 0.:
+                    ind = np.argmax(
+                        source_weight*spatial_pdf_mask*cat_weights/density
+                    )
+                    final.append(
+                        [
+                            source.fits_path,
+                            cat_data.at[ind, 'Source_Name'],
+                            np.log(prob)
+                        ]
+                    )
+                else:
+                    final.append(
+                        [
+                            source.fits_path,
+                            None,
+                            np.log(prob)
+                        ]
+                    )
             
         if savedata is not None:
             with open(os.path.join(savedata,"correlations.pkl"), "wb") as fp:
