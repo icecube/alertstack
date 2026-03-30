@@ -633,16 +633,16 @@ class Hypothesis:
             
             if savedata is not None:
                 if density != 0.:
-                    ind = np.argmax(
-                        source_weight*spatial_pdf_mask*cat_weights/density
-                    )
-                    final.append(
-                        [
-                            source.fits_path,
-                            cat_data.at[ind, 'Source_Name'],
-                            np.log(prob)
-                        ]
-                    )
+                    ts = source_weight*spatial_pdf_mask*cat_weights/density
+                    if max(ts) != 0.:
+                        ind = np.argmax(ts)
+                        final.append(
+                            [
+                                source.fits_path,
+                                cat_data.at[ind, 'Source_Name'],
+                                np.log(prob)
+                            ]
+                        )
                 else:
                     final.append(
                         [
