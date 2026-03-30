@@ -182,7 +182,9 @@ condor_submit_dag dagfile.dag
 
 As soon as the jobs are finished, you should see the results in `examples/???_neutrino_alert/cache/`. This is not yet the end of the story. To see the final TS distribution and sensitivity, you should first combine the several results (1 file per job) using the `examples/???_neutrino_alert/ts_unifier_???.py` script. This script requires the same `--n_trials`, `--fraction`, and `--n_steps` used for the dagman file, plus the eventual `--tag` used. The script will combine the results in one single file.
 
-When you are ready to unblind the analysis, you can run
+## Unblinding code (currently only test)
+
+To unblind the analysis, you can run
 
 ```
 python examples/???_neutrino_alert/unblind_???_analysis.py
@@ -199,7 +201,9 @@ Counting bins: p-value = ?? (?? sigmas)
 ######################################################
 ```
 
-For the unblinding script there is an extra argument that you can parse, `--no_run`. This will make the script look for the latest file in `/cache` and recover the background trials from there. If you don't use this flag, the script will run 5000 background trials by default (which can also be modified with the tag `--n_trials`). A plot that shows the TS distribution of the background and the TS value of the data will be stored in `examples/???_neutrino_alert/cache/ts_data.png`. Moreover, a file with all the correlations found will be stored in `examples/???_neutrino_alert/cache/correlations.pkl`. With this, you can then run 
+This for the moment will be a mock result, not using real data, as the analysis has not been approved for unblinding yet.
+
+For the unblinding script, there is an extra argument that you can parse, `--input`. This requires the path to some scrambling result for the test-statistic background distribution. If you write `None` with this flag, the script will run 5000 background trials by default (which can also be modified with the tag `--n_trials`). A plot that shows the TS distribution of the background and the TS value of the data will be stored in `examples/???_neutrino_alert/cache/???scrambles_result.png`. Moreover, a file with all the correlations found will be stored in `examples/???_neutrino_alert/cache/correlations.pkl`. With this, you can then run 
 
 
 ```
@@ -207,11 +211,3 @@ python examples/???_neutrino_alert/create_table_correlations.py
 ```
 
 and a list with all the correlations will be printed.
-
-For the radio catalog analysis there is an extra script, `mimic_plavin_paper.py`. In that script, the TS is calculated using Plavin's method to obtain `S_spatial` (more info in the wiki). When you run the script with 
-
-```
-python examples/agn_radio_neutrino_alert/mimic_plavin_paper.py
-```
-
-the script produces background trials and calculates the TS of the data. The output is the p-value and a plot with the TS distribution of the background and the TS of the data is stored in `examples/agn_radio_neutrino_alert/cache/ts_data_plavin.png`. You can select the number of background trials with `--n_trials` (default is 5000). 
