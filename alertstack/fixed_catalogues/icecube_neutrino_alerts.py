@@ -7,11 +7,15 @@ import logging
 import mhealpy as mhp
 import numpy as np
 import os
+import pandas as pd
 import pickle
 import resource
 from scipy.stats import norm
 from scipy import sparse
 import time
+
+csv_path = os.path.join(alertstack_data_dir, "division_LED_HED_events.txt")
+df_led_hed = pd.read_csv(csv_path, sep='\\s+')
 
 
 class NeutrinoAlert(PointSource):
@@ -149,6 +153,15 @@ class HealpixNeutrinoAlert(PointSource):
             self.header["DEC_ERR_PLUS_90"],
             self.header["DEC_ERR_MINUS_90"]
         ])
+        
+        matches = df_led_hed[(
+            (df_led_hed["run"]==self.runid) & 
+            (df_led_hed["evtid"]==self.eventid)
+        )]['evttype'].to_numpy()
+        if len(matches) > 0:
+            self.evttype = matches[0]
+        else:
+            self.evttype = "CR"
 
         self.uniqs = skymap['UNIQ']
         self.probdensity = skymap["PROBDENSITY"]

@@ -467,14 +467,26 @@ class Hypothesis:
         Cut all neutrino events below this energy (in TeV)
         (useful to investigate the minimal sensitive energy)
     max_run: `int`
-        Remove all neutrino alerts after this run       
+        Remove all neutrino alerts after this run
+    evttype: `str`
+        Select all neutrinos ('ALL'), only LED neutrinos ('LED),
+        or only HED neutrinos ('HED')
     """
     name = None
     unit = None
 
-    def __init__(self, fixed_catalogue, min_E=0., max_run=200000):
+    def __init__(
+        self, fixed_catalogue, min_E=0., max_run=200000, evttype='ALL'
+    ):
     #  min_E added to test minimum sensitive energy
-        self.fixed_catalogue = fixed_catalogue
+        evttypes = np.array(
+            [nu.evttype for nu in fixed_catalogue]
+        )
+        if evttype == "ALL":
+            typemask = np.empty(len(evttypes))
+            typemask.fill(True)
+        else:
+            typemask = evttypes == evttype
 
         nu_energies = np.array([nu.energy for nu in fixed_catalogue])
         nu_runids = np.array([nu.runid for nu in fixed_catalogue])
@@ -501,7 +513,7 @@ class Hypothesis:
             spatialmask = (nudecs + nudecsplus) > -25.
             self.fixed_catalogue = np.array(
                 fixed_catalogue.data
-            )[timemask & spatialmask & energymask]
+            )[timemask & spatialmask & energymask & (typemask==1)]
             # Code to investigate which neutrinos have been selected. Decomment to use it.
             # selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
             # selected_nus.sort()
@@ -518,15 +530,19 @@ class Hypothesis:
             timemask = (
                 (nutimes >= minflarestime) & (nutimes <= maxflarestime)
             )
-            self.fixed_catalogue = np.array(fixed_catalogue.data)[timemask & energymask]
+            self.fixed_catalogue = np.array(fixed_catalogue.data)[
+                timemask & energymask & (typemask==1)
+            ]
             # Code to investigate which neutrinos have been selected. Decomment to use it.
             # selected_nus = [f"{nu.header["RUNID"]} {nu.header["EVENTID"]}" for nu in self.fixed_catalogue]
             # selected_nus.sort()
             # for i, nu in enumerate(selected_nus):
             #     print(i, nu)
         else:
-            self.fixed_catalogue = np.array(fixed_catalogue.data)[energymask & runmask]
-            
+            self.fixed_catalogue = np.array(fixed_catalogue.data)[
+                energymask & runmask & (typemask==1)
+            ]
+
         self.source_weights = np.array(
             [source.eval_source_weight() for source in self.fixed_catalogue]
         )
@@ -640,7 +656,8 @@ class Hypothesis:
                             [
                                 source.fits_path,
                                 cat_data.at[ind, 'Source_Name'],
-                                np.log(prob)
+                                np.log(prob),
+                                source.evttype,
                             ]
                         )
                 else:
@@ -648,7 +665,8 @@ class Hypothesis:
                         [
                             source.fits_path,
                             None,
-                            np.log(prob)
+                            np.log(prob),
+                            source.evttype,
                         ]
                     )
             

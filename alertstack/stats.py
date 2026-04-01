@@ -22,15 +22,21 @@ class TSHandler:
     PROB_3S = 1.35e-3
     PROB_5S = 2.87e-7
 
-    def __init__(self, results, analysis, max_run=142135):
+    def __init__(self, results, analysis, max_run=142135, evttype="ALL"):
         self.results = results
         self.sens_threshold = dict()
         self.disc_3_threshold = dict()
         self.disc_5_threshold = dict()
         runs = np.array([nu.runid for nu in analysis.fixed_sources])
+        evttypes = np.array([nu.evttype for nu in analysis.fixed_sources])
+        if evttype == "ALL":
+            typemask = np.empty(len(evttypes))
+            typemask.fill(True)
+        else:
+            typemask = evttypes == evttype
         tmp = np.array(
             [i.weight for i in analysis.fixed_sources]
-        )[runs<=max_run]
+        )[(runs<=max_run) & (typemask==1)]
         self.avg_signalness = np.mean(tmp)
         self.n_events = len(tmp)
         self.x1 = None
@@ -149,7 +155,7 @@ class TSHandler:
         plt.legend()
 
 
-    def extract_sens_dp(self, extent=0.2):
+    def extract_sens_dp(self, extent=0.2, only_sens=False):
         """Extrapolate percentages of astrophysical neutrino flux
         necessary to get a TS higher than signalness, 3-sigma,
         and 5 sigma discovery potential.
@@ -158,6 +164,8 @@ class TSHandler:
         ----------
         extent: `float`
             max extent to extrapolate percentages.
+        only_sens: `bool`
+            Option to extract only the sensitivity
         """
         
         levels = [
@@ -165,6 +173,8 @@ class TSHandler:
             ("3 Sigma Discovery Potential", self.disc_3_threshold),
             ("5 Sigma Discovery Potential", self.disc_5_threshold)
         ]
+        if only_sens:
+            levels = [("Background Median", self.sens_threshold)]
         
         above = dict()
         
@@ -193,18 +203,20 @@ class TSHandler:
         self.sens = [list(
             above.values()
         )[i][0] for i in range(len(self.fracs))]
-        self.sig3 = [list(
-            above.values()
-        )[i][1] for i in range(len(self.fracs))]
-        self.sig5 = [list(
-            above.values()
-        )[i][2] for i in range(len(self.fracs))]
+        if not only_sens:
+            self.sig3 = [list(
+                above.values()
+            )[i][1] for i in range(len(self.fracs))]
+            self.sig5 = [list(
+                above.values()
+            )[i][2] for i in range(len(self.fracs))]
         
         # Interpolate a curve to the data points of
         # the fraction of trials above each threshold
         f1 = interpolate.interp1d(self.fracs, self.sens, kind='cubic')
-        f2 = interpolate.interp1d(self.fracs, self.sig3, kind='cubic')
-        f3 = interpolate.interp1d(self.fracs, self.sig5, kind='cubic')
+        if not only_sens:
+            f2 = interpolate.interp1d(self.fracs, self.sig3, kind='cubic')
+            f3 = interpolate.interp1d(self.fracs, self.sig5, kind='cubic')
         
         # Calculate flux needed to achieve sensitivity
         # and discovery potential
@@ -217,8 +229,9 @@ class TSHandler:
         )
         
         self.x1 = bisect(lambda x: f1(x)-0.9, 0, extent, xtol=1e-6)
-        self.x2 = bisect(lambda x: f2(x)-0.5, 0, extent, xtol=1e-6)
-        self.x3 = bisect(lambda x: f3(x)-0.5, 0, extent, xtol=1e-6)
+        if not only_sens:
+            self.x2 = bisect(lambda x: f2(x)-0.5, 0, extent, xtol=1e-6)
+            self.x3 = bisect(lambda x: f3(x)-0.5, 0, extent, xtol=1e-6)
         
         print(
             "Sensitivity at {0:.3f} of flux,"
@@ -228,23 +241,24 @@ class TSHandler:
                 self.n_events,
                 (self.x1*self.avg_signalness))
         )
-        print(
-            "3 Sigma discovery at {0:.3f} of flux,"
-            " expectation of {1:.1f}/{2} = {3:.3f}".format(
-                self.x2,
-                (self.x2*self.avg_signalness)*self.n_events,
-                self.n_events,
-                (self.x2*self.avg_signalness)
+        if not only_sens:
+            print(
+                "3 Sigma discovery at {0:.3f} of flux,"
+                " expectation of {1:.1f}/{2} = {3:.3f}".format(
+                    self.x2,
+                    (self.x2*self.avg_signalness)*self.n_events,
+                    self.n_events,
+                    (self.x2*self.avg_signalness)
+                )
             )
-        )
-        print(
-            "5 Sigma discovery at {0:.3f} of flux,"
-            " expectation of {1:.1f}/{2} = {3:.3f}".format(
-                self.x3,
-                (self.x3*self.avg_signalness)*self.n_events,
-                self.n_events,
-                (self.x3*self.avg_signalness)
-            )
+            print(
+                "5 Sigma discovery at {0:.3f} of flux,"
+                " expectation of {1:.1f}/{2} = {3:.3f}".format(
+                    self.x3,
+                    (self.x3*self.avg_signalness)*self.n_events,
+                    self.n_events,
+                    (self.x3*self.avg_signalness)
+                )
         )
         print(
             "\n------------------------------------------------------"
