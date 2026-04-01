@@ -10,6 +10,7 @@ from examples.fermi_LC_blazar_neutrino_alert import (
     blazar_analysis as blazar_analysis_monthly
 )
 from examples.radio_agn_neutrino_alert import agn_analysis
+from matplotlib.ticker import AutoMinorLocator
 
 cristina_tot_nu = 275
 cristina_average_signalness = 0.451
@@ -76,12 +77,14 @@ if __name__ == "__main__":
     ts_handler_monthly = TSHandler(res_monthly, blazar_analysis_monthly)
     ts_handler_rfc = TSHandler(res_rfc, agn_analysis)
     ts_handler_average_reduced = TSHandler(
-        res_average_reduced, blazar_analysis_average
+        res_average_reduced, blazar_analysis_average, max_run=134818
     )
     ts_handler_monthly_reduced = TSHandler(
-        res_monthly_reduced, blazar_analysis_monthly
+        res_monthly_reduced, blazar_analysis_monthly, max_run=134818
     )
-    ts_handler_rfc_reduced = TSHandler(res_rfc_reduced, agn_analysis)
+    ts_handler_rfc_reduced = TSHandler(
+        res_rfc_reduced, agn_analysis, max_run=134818
+    )
     ts_handler_average.find_thresholds_gamma()
     ts_handler_monthly.find_thresholds_gamma()
     ts_handler_rfc.find_thresholds_gamma()
@@ -115,8 +118,9 @@ if __name__ == "__main__":
     xs = [1,2,3]
     plt.xlim(0.5,3.5)
     plt.ylim(0,7)
-    plt.grid(axis="x")
-    plt.grid(linestyle="dotted", axis="y")
+    #plt.grid(axis="x")
+    plt.grid(linestyle="dashed", axis="y", which="major", linewidth=0.5)
+    plt.grid(linestyle="dotted", axis="y", which="minor", linewidth=0.5)
     plt.scatter(xs, np.array([
         cristina_sens_rfc,
         cristina_sens_fermi_average,
@@ -136,7 +140,9 @@ if __name__ == "__main__":
     )
 
     axs = plt.gca()
+    axs.yaxis.set_minor_locator(AutoMinorLocator())
     axs.set_xticks(xs, labels=["RFC", "Fermi average", "Fermi monthly"])
+    axs.set_axisbelow(True)
     plt.ylabel("Percentage of astrophysical neutrino flux [%]")
     plt.legend()
     

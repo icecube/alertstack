@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import pandas as pd
 import pickle
@@ -15,7 +16,7 @@ if __name__ == "__main__":
          cor = pickle.load(fp)
             
     print(
-        '| i | Run + event number |   Alert   | Blazar correlated |  TS   |'
+        '| i | Run + event number |   Alert   | Blazar correlated |  TS   | Energy deposition |'
     )
     
     for i in cor:
@@ -24,10 +25,18 @@ if __name__ == "__main__":
         i.append(ic_id)
         
     cor.sort(key=lambda x: x[2], reverse=True)
-    names = [i[3] for i in cor]
+    names = [i[4] for i in cor]
+    ts = np.array(cor)[:,2]
+    evttypes = np.array(cor)[:,3]
+    led_ts = np.sum([float(x) for x in ts[evttypes=="LED"]])
+    hed_ts = np.sum([float(x) for x in ts[evttypes=="HED"]])
     
     [print(
-        f"| {n} | {i[0]} | {names[n]} | {i[1]} | {i[2]:.3e} |"
+        f"| {n} | {i[0]} | {names[n]} | {i[1]} | {i[2]:.3e} | {i[3]} |"
     ) for n, i in enumerate(cor)]
     print('-------------------------------------------------------------')
+    print(
+        f"Test statistic due to LED events: {led_ts:.2f}\n"
+        f"Test statistic due to HED events: {hed_ts:.2f}"
+    )
 

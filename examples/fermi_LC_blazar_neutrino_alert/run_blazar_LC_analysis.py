@@ -35,6 +35,15 @@ if __name__ == "__main__":
         default=142135,
         help ='Last run to consider for the neutrinos'
     )
+    parser.add_argument(
+        '--evttype',
+        type=str,
+        default='ALL',
+        help = (
+            "Select all neutrinos ('ALL'), only LED neutrinos ('LED),"
+            "or only HED neutrinos ('HED')"
+        )
+    )
     args = parser.parse_args()
     
     '''
@@ -43,6 +52,8 @@ if __name__ == "__main__":
     fraction: Maximum fraction of astrophysical neutrinos to be injected
     n_steps: Number of different injection steps to test, between 0 and fraction.
     run: Last run to consider for the neutrinos.
+    evttype: Select all neutrinos ('ALL'), only LED neutrinos ('LED),
+    or only HED neutrinos ('HED')
     '''
 
     logging.getLogger().setLevel("INFO")
@@ -58,5 +69,6 @@ if __name__ == "__main__":
         additional_tag=args.tag,
         chunksize=chunksize,
         progression_bar=True,
-        max_run=args.run
+        max_run=args.run,
+        evttype=args.evttype,
     )
