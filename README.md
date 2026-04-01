@@ -36,6 +36,7 @@ The repository is structured as follows:
     - The [Flaires catalog](https://www.aanda.org/articles/aa/full_html/2025/03/aa51340-24/aa51340-24.html) (<code>flaires.dat</code>)
     - A file with information of the light curves of blazars at the neutrino arrival times (`weights_LC.pkl`)
     - A reduced sample of public alerts used by Plavin et al. (<code>plavin_alerts.txt</code> and <code>catalog_of_alerts.txt</code>).
+    - The official classification of alerts in low-energy deposition (LED) and high-energy deposition (HED) events (`division_LED_HED_events.txt`)
 
 **General scripts**
 - `alertstack/analyse.py`: defines class Analyse, which produces the background maps and runs the trials. Other useful functions include saving and loading results. 
@@ -59,33 +60,44 @@ Two scripts are available to investigate the catalogs:
     - `run_blazar_analysis.sh`: wrapper of `run_blazar_analysis.py` to perform everything with one simple bash command (explained in **Run the code** section).
     - `plot_sensitivity_fermi_blazar.py`: from the test-statistic distribution, extrapolates sensitivity, discovery potential, and makes plots about them.
     - `fermi_isotropic.ipynb`: Jupyter Notebook to study the isotropy of the Fermi catalog.
+    - `unblind_blazar_analysis.py`: calculates the p-value (only run after the unblinding has been approved).
+    - `create_table_correlations.py`: prints a table with all the correlations found in the data (run and event number and alert name for the neutrino, J2000 name for the source, contribution to the TS, and classification in LED and HED events). It also calculates the contribution to the final test statistic from the LED and HED samples separately (only run after the unblinding has been approved).
    
 - `examples/fermi_LC_blazar_neutrino_alert`: contains the main analysis script for the blazar-neutrino alerts correlation analysis using the available light curves as weights.
     - `run_blazar_analysis.py`: calculates the test-statistic distribution (explained in **Run the code** section).
     - `run_blazar_analysis.sh`: wrapper of `run_blazar_analysis.py` to perform everything with one simple bash command (explained in **Run the code** section).
     - `plot_sensitivity_fermi_LC_blazar.py`: from the test-statistic distribution, extrapolates sensitivity, discovery potential, and makes plots about them.
     - `create_weights_LC.py`: creates a pickle file with a dictionary containing the values of each blazar light curve at the arrival times of all neutrinos. The file is already stored in `alertstack/data`.
+    - `unblind_blazar_analysis.py`: calculates the p-value (only run after the unblinding has been approved).
+    - `create_table_correlations.py`: prints a table with all the correlations found in the data (run and event number and alert name for the neutrino, J2000 name for the source, contribution to the TS, and classification in LED and HED events). It also calculates the contribution to the final test statistic from the LED and HED samples separately (only run after the unblinding has been approved).
 
 - `examples/radio_agn_neutrino_alert`: contains the main analysis script for the AGN-neutrino alerts correlation analysis.
     - `run_radio_analysis.py`: calculates the test-statistic distribution (explained in **Run the code** section).
     - `run_radio_analysis.sh`: wrapper of `run_radio_analysis.py` to perform everything with one simple bash command (explained in **Run the code** section).
     - `plot_sensitivity_radio_agn.py`: from the test-statistic distribution, extrapolates sensitivity, discovery potential, and makes plots about them.
+    - `unblind_radio_analysis.py`: calculates the p-value (only run after the unblinding has been approved).
+    - `create_table_correlations.py`: prints a table with all the correlations found in the data (run and event number and alert name for the neutrino, J2000 name for the source, contribution to the TS, and classification in LED and HED events). It also calculates the contribution to the final test statistic from the LED and HED samples separately (only run after the unblinding has been approved).
 
 - `examples/sjoert_accretion_flares_neutrino_alert`: contains the main analysis script for the 63 accretion flares-neutrino alerts correlation analysis.
     - `run_sjoert_analysis.py`: calculates the test-statistic distribution (explained in **Run the code** section).
     - `run_sjoert_analysis.sh`: wrapper of `run_sjoert_analysis.py` to perform everything with one simple bash command (explained in **Run the code** section).
     - `plot_sensitivity_sjoert.py`: from the test-statistic distribution, extrapolates sensitivity, discovery potential, and makes plots about them.
     - `dag_creator_sjoert.py`: script that creates the dag file to submit the jobs to recreate the full test statistic distribution. Since a few coincidences are enough for a very high test statistic, the test-statistic background distribution does not follow asymptotic distributions and needs to be fully explored with scrambles.
+    - `unblind_sjoert_analysis.py`: calculates the p-value (only run after the unblinding has been approved).
+    - `create_table_correlations.py`: prints a table with all the correlations found in the data (run and event number and alert name for the neutrino, name for the source, contribution to the TS, and classification in LED and HED events). It also calculates the contribution to the final test statistic from the LED and HED samples separately (only run after the unblinding has been approved).
 
 - `examples/flaires_neutrino_alert`: contains the main analysis script for the Flaires-neutrino alerts correlation analysis.
     - `run_flaires_analysis.py`: calculates the test-statistic distribution (explained in **Run the code** section).
     - `run_flaires_analysis.sh`: wrapper of `run_sjoert_analysis.py` to perform everything with one simple bash command (explained in **Run the code** section).
     - `plot_sensitivity_flaires.py`: from the test-statistic distribution, extrapolates sensitivity, discovery potential, and makes plots about them.
     - `dag_creator_flaires.py`: script that creates the dag file to submit the jobs to recreate the full test statistic distribution. Since a few coincidences are enough for a very high test statistic, the test-statistic background distribution does not follow asymptotic distributions and needs to be fully explored with scrambles.
+    - `unblind_flaires_analysis.py`: calculates the p-value (only run after the unblinding has been approved).
+    - `create_table_correlations.py`: prints a table with all the correlations found in the data (run and event number and alert name for the neutrino, name for the source, contribution to the TS, and classification in LED and HED events). It also calculates the contribution to the final test statistic from the LED and HED samples separately (only run after the unblinding has been approved).
 
 To plot all test-statistic distributions, discover potentials, and sensitivities with a single command, the script `examples/plot_all.py` is available.
 
-Moreover, the script `examples/compare_sensitivities.py` compares sensitivities with [the older version of this analysis](https://github.com/icecube/wg-nu-sources/tree/main/2022_Fermi_Blazars_Alerts_Stacking).
+The script `examples/compare_sensitivities.py` compares sensitivities with [the older version of this analysis](https://github.com/icecube/wg-nu-sources/tree/main/2022_Fermi_Blazars_Alerts_Stacking).
+The script `examples/pre-unblinding-reco-check.py` performs a pre-unblinding check that consists of estimating how much each one of the two new reconstructions (SplineMPE with likelihood scan and Millipede Wilks) influences the improvement in sensitivity.
 
 
 ## Install locally
@@ -201,7 +213,7 @@ Counting bins: p-value = ?? (?? sigmas)
 ######################################################
 ```
 
-This for the moment will be a mock result, not using real data, as the analysis has not been approved for unblinding yet.
+This, for the moment, will be a mock result, not using real data, as the analysis has not been approved for unblinding yet.
 
 For the unblinding script, there is an extra argument that you can parse, `--input`. This requires the path to some scrambling result for the test-statistic background distribution. If you write `None` with this flag, the script will run 5000 background trials by default (which can also be modified with the tag `--n_trials`). A plot that shows the TS distribution of the background and the TS value of the data will be stored in `examples/???_neutrino_alert/cache/???scrambles_result.png`. Moreover, a file with all the correlations found will be stored in `examples/???_neutrino_alert/cache/correlations.pkl`. With this, you can then run 
 
@@ -210,4 +222,4 @@ For the unblinding script, there is an extra argument that you can parse, `--inp
 python examples/???_neutrino_alert/create_table_correlations.py
 ```
 
-and a list with all the correlations will be printed.
+and a list with all the correlations will be printed. This last script also performs a post-unblinding check. It estimates separately for LED and HED events (reconstructed respectively with SplineMPE with likelihood scan and Millipede Wilks) the contribution to the final test statistic.
