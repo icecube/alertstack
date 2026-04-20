@@ -11,6 +11,9 @@ import time
 
 alertstack_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/")
 
+# Expected fraction of signal events within the Gold+Bronze selection
+ASTROPURITY_GOLD_BRONZE = 0.326714241
+
 
 class PointSource:
     """Basic class for neutrino events.
@@ -671,6 +674,7 @@ class Hypothesis:
                     )
             
         if savedata is not None:
+            os.makedirs(savedata, exist_ok=True)
             with open(os.path.join(savedata,"correlations.pkl"), "wb") as fp:
                 pickle.dump(final, fp)
 
@@ -693,7 +697,7 @@ class Hypothesis:
         nucat = self.fixed_catalogue
 
         # Choose expected number of neutrinos (astrophysical or not) to have correlations
-        n_exp = fraction * np.sum(np.array(self.source_weights))
+        n_exp = fraction * ASTROPURITY_GOLD_BRONZE * len(nucat)
         # Get number of neutrinos with correlations (Poisson fluctuation)
         n_inj = np.random.poisson(n_exp)
 

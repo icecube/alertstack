@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 
+from alertstack import ASTROPURITY_GOLD_BRONZE
 from scipy import interpolate
 from scipy.optimize import bisect
 from scipy.stats import norm
@@ -17,12 +18,30 @@ class TSHandler:
         Results from an analysis
     analysis: `alertstack.Analyse`
         The analysis involved for the statistics
+    max_run: `int`
+        Last run to consider for the neutrinos
+    evttype: `str`
+        Select all neutrinos ('ALL'), only LED neutrinos ('LED),
+        or only HED neutrinos ('HED')
+    old: `bool`
+        The results are from the previous analysis of Cristina
     '''
 
     PROB_3S = 1.35e-3
     PROB_5S = 2.87e-7
 
-    def __init__(self, results, analysis, max_run=142135, evttype="ALL"):
+    def __init__(
+        self,
+        results,
+        analysis,
+        max_run=142135,
+        evttype="ALL",
+        old=False,
+    ):
+        addition = 0
+        if old:
+            max_run = 134818
+            addition = 8 # 8 CR events were included in the older catalog
         self.results = results
         self.sens_threshold = dict()
         self.disc_3_threshold = dict()
@@ -38,7 +57,7 @@ class TSHandler:
             [i.weight for i in analysis.fixed_sources]
         )[(runs<=max_run) & (typemask==1)]
         self.avg_signalness = np.mean(tmp)
-        self.n_events = len(tmp)
+        self.n_events = len(tmp) + addition
         self.x1 = None
         self.x2 = None
         self.x3 = None
@@ -182,9 +201,10 @@ class TSHandler:
         # a certain threshold and store the information
         # in the 'above' dictionary
         for step, res in self.results.items():
+            frac = step / ( ASTROPURITY_GOLD_BRONZE * self.n_events )
             print(
                 "\nFraction of neutrino alerts correlated"
-                " to source: {0} \n".format(step)
+                " to source: {0} \n".format(frac)
             )
         
             bkgs = dict()
@@ -197,7 +217,7 @@ class TSHandler:
                     print("Fraction above {0}: {1}".format(
                         name, np.sum(val > thresh[key])/float(len(val))))
                     temp.append(np.sum(val > thresh[key])/float(len(val)))        
-            above[step] = temp
+            above[frac] = temp
         
         self.fracs = list(above.keys())
         self.sens = [list(
@@ -224,7 +244,7 @@ class TSHandler:
             "\n------- Sensitivity and discovery potential with "
             "{0} neutrino alerts"
             " (average signalness: {1:.1f} %) --------\n".format(
-                self.n_events, 100*self.avg_signalness
+                self.n_events, 100*ASTROPURITY_GOLD_BRONZE
             )
         )
         
@@ -237,27 +257,27 @@ class TSHandler:
             "Sensitivity at {0:.3f} of flux,"
             " expectation of {1:.1f}/{2} = {3:.3f}".format(
                 self.x1,
-                (self.x1*self.avg_signalness)*self.n_events,
+                (self.x1*ASTROPURITY_GOLD_BRONZE)*self.n_events,
                 self.n_events,
-                (self.x1*self.avg_signalness))
+                (self.x1*ASTROPURITY_GOLD_BRONZE))
         )
         if not only_sens:
             print(
                 "3 Sigma discovery at {0:.3f} of flux,"
                 " expectation of {1:.1f}/{2} = {3:.3f}".format(
                     self.x2,
-                    (self.x2*self.avg_signalness)*self.n_events,
+                    (self.x2*ASTROPURITY_GOLD_BRONZE)*self.n_events,
                     self.n_events,
-                    (self.x2*self.avg_signalness)
+                    (self.x2*ASTROPURITY_GOLD_BRONZE)
                 )
             )
             print(
                 "5 Sigma discovery at {0:.3f} of flux,"
                 " expectation of {1:.1f}/{2} = {3:.3f}".format(
                     self.x3,
-                    (self.x3*self.avg_signalness)*self.n_events,
+                    (self.x3*ASTROPURITY_GOLD_BRONZE)*self.n_events,
                     self.n_events,
-                    (self.x3*self.avg_signalness)
+                    (self.x3*ASTROPURITY_GOLD_BRONZE)
                 )
         )
         print(
@@ -285,7 +305,7 @@ class TSHandler:
             self.x1,
             linestyle="dashdot",
             label=f"Sensitivity ({(
-                self.x1*self.avg_signalness
+                self.x1*ASTROPURITY_GOLD_BRONZE
             )*self.n_events:.1f} alerts)"
         )
         plt.axvline(
@@ -293,14 +313,14 @@ class TSHandler:
             linestyle="dashdot",
             color="tab:orange",
             label=r"3-$\sigma$ discovery potential"
-            f"\n({(self.x2*self.avg_signalness)*self.n_events:.1f} alerts)"
+            f"\n({(self.x2*ASTROPURITY_GOLD_BRONZE)*self.n_events:.1f} alerts)"
         )
         plt.axvline(
             self.x3,
             linestyle="dashdot",
             color="tab:green",
             label=r"5-$\sigma$ discovery potential"
-            f"\n({(self.x3*self.avg_signalness)*self.n_events:.1f} alerts)"
+            f"\n({(self.x3*ASTROPURITY_GOLD_BRONZE)*self.n_events:.1f} alerts)"
         )
         data_derived_string = "Assumption of isotropic catalog"
         if data_derived:
@@ -308,8 +328,8 @@ class TSHandler:
         plt.title(
             f"{self.n_events} neutrino alerts\n"
             f"{data_derived_string}\n"
-            f"average signalness {round(100*self.avg_signalness,1)}%, "
-            f"~{round(self.n_events*self.avg_signalness)}"
+            f"astrophysical neutrino purity {round(100*ASTROPURITY_GOLD_BRONZE,1)}%, "
+            f"~{round(self.n_events*ASTROPURITY_GOLD_BRONZE)}"
             " astrophysical neutrinos"
         )
         plt.plot(
@@ -330,6 +350,17 @@ class TSHandler:
             marker='o',
             label=r"Fraction above 5-$\sigma$ level"
         )
+
+        def frac_to_nus(frac):
+            return frac * self.n_events * ASTROPURITY_GOLD_BRONZE
+        def nus_to_frac(nus):
+            return nus / (self.n_events * ASTROPURITY_GOLD_BRONZE)
+        
+        secax = plt.gca().secondary_xaxis(
+            -0.15, functions=(frac_to_nus, nus_to_frac)
+        )
+        secax.set_xlabel("Number of astrophysical neutrinos")
+        
         plt.ylabel("Fraction of samples")
         plt.xlabel(
             "Fraction of astrophysical neutrino alerts correlated to source"

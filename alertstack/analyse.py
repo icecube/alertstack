@@ -1,14 +1,15 @@
-import pickle
-import os
+import logging
 import numpy as np
-from tqdm import tqdm
+import os
+import pickle
+import random
+import time
+
+from alertstack import ASTROPURITY_GOLD_BRONZE
 from alertstack.stats import GammaDistribution
 from datetime import datetime
-import logging
-import random
+from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
-
-import time
 
 
 class Analyse:
@@ -221,6 +222,9 @@ class Analyse:
 
         # Combine results into nested dictionaries
         for fraction in sorted(list(set(fs))):
+            n_exp = fraction * ASTROPURITY_GOLD_BRONZE * len(
+                self._injection_hypo.fixed_catalogue
+            )
             mask = np.array(fs) == fraction
             cut_results = np.array(results)[mask]
             res_dict = cut_results[0]
@@ -228,7 +232,9 @@ class Analyse:
                 for key, val in entry.items():
                     res_dict[key] += val
 
-            all_res[fraction] = res_dict
+            # Save with the number of injected neutrinos instead of
+            # the fraction of astro flux. Easier to re-interpret.
+            all_res[n_exp] = res_dict
 
         self.all_res = all_res
 
