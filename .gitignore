@@ -5,3 +5,4 @@ examples/*/cache/*
 */*checkpoint.*
 */*/*checkpoint.*
 */*/*/*checkpoint.*
+*/*/*/*/*checkpoint.*
