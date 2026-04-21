@@ -36,7 +36,7 @@ setuptools.setup(
         "hellolancel @ git+https://github.com/sjoertvv/HelloLancel.git@main",
     ],
     package_data={'alertstack': [
-        'alertstack/data/*']},
+        'data/*']},
     include_package_data=True
 )
 
