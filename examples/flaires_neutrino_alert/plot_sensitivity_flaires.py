@@ -15,7 +15,7 @@ if __name__ == "__main__":
         type=str,
         default=(
             "/data/user/gsommani/alertstack_results/"
-            "flaires_n2000000_f0.07_s10_update_signalness.pkl"
+            "flaires_n2000000_f0.07_s10_update_signalness_converted.pkl"
         ),
         help = 'Results to use')
     args = parser.parse_args()

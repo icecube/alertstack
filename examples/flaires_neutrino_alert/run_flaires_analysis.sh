@@ -6,10 +6,10 @@ if [[ ${MYWORKDIR:1:4} == "data" ]]; then
     SCRIPTPATH=${MYWORKDIR}${SCRIPTDIR:1}
     EXECUTABLE=${SCRIPTPATH%.*}".py"
 else
-    EXECUTABLE="/data/user/gsommani/alertstack-icecube/examples/flaires_neutrino_alert/run_flaires_analysis.py"
+    EXECUTABLE="/data/user/gsommani/wg-nu-sources-official/2026_Alertstack_IceCat2/examples/flaires_neutrino_alert/run_flaires_analysis.py"
 fi
 
-VENV="/data/user/gsommani/alertstack-venv"
+VENV="/data/user/gsommani/wg-nu-sources-official/test-venv"
 
 CVFMS_PREFIX="/cvmfs/icecube.opensciencegrid.org"
 CVMFS_DISTRIBUTION="py3-v4.4.0"

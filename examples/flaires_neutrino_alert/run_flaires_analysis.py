@@ -37,6 +37,12 @@ if __name__ == "__main__":
         default=200000,
         help ='Last run to consider for the neutrinos'
     )
+    parser.add_argument(
+        '--progression_bar',
+        type=bool,
+        default=False,
+        help ='Show or not the progression bar'
+    )
     args = parser.parse_args()
     
     '''
@@ -45,6 +51,7 @@ if __name__ == "__main__":
     fraction: Maximum fraction of astrophysical neutrinos to be injected
     n_steps: Number of different injection steps to test, between 0 and fraction.
     run: Last run to consider for the neutrinos.
+    progression_bar: Show or not the progression bar
     '''
 
     logging.getLogger().setLevel("INFO")
@@ -59,5 +66,5 @@ if __name__ == "__main__":
         n_steps=args.n_steps,
         additional_tag=args.tag,
         chunksize=chunksize,
-        progression_bar=False
+        progression_bar=args.progression_bar
     )

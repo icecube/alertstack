@@ -14,9 +14,10 @@ if __name__ == "__main__":
         '--input',
         type=str,
         default=(
-            "/data/user/gsommani/alertstack-icecube/examples/"
+            "/data/user/gsommani/wg-nu-sources-official/"
+            "2026_Alertstack_IceCat2/examples/"
             "fermi_blazar_neutrino_alert/cache/"
-            "february_update_2026_02_27-11_49_46.pkl"
+            "april_update_2026_04_13-15_21_57_converted.pkl"
         ),
         help = 'Results to use')
     parser.add_argument(
