@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 from alertstack.stats import TSHandler
-from examples.flaires_neutrino_alert import flaires_analysis
+from original_examples.flaires_neutrino_alert import flaires_analysis
 
 if __name__ == "__main__":
     

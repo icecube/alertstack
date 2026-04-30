@@ -5,12 +5,14 @@ import numpy as np
 import os
 
 from alertstack.analyse import Analyse
-from alertstack.scramble_catalogues.blazar_catalogue import (
-    Fermi4FGLBlazarCatalogue,
-    AverageFluxWeightHypothesis,
+from alertstack.scramble_catalogues.flaires_catalogue import (
+    FlairesCatalogue,
+    FluencebolHypothesis,
 )
-from alertstack.stats import GammaDistribution, TSHandler
-from examples.fermi_blazar_neutrino_alert import blazar_analysis
+from alertstack.stats import TSHandler
+from original_examples.flaires_neutrino_alert import (
+    flaires_analysis
+)
 from scipy import stats
 
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -41,9 +43,8 @@ if __name__ == "__main__":
         '--input',
         type=str,
         default=(
-            "/data/user/gsommani/alertstack-icecube/examples/"
-            "fermi_blazar_neutrino_alert/cache/"
-            "february_update_2026_02_27-11_49_46.pkl"
+            "/data/user/gsommani/alertstack_results/"
+            "flaires_n2000000_f0.07_s10_update_signalness.pkl"
         ),
         help = 'Results to use. If None, recalculates the results.'
     )
@@ -61,56 +62,57 @@ if __name__ == "__main__":
 
     # Run trials and save results
     if args.input == 'None':
-        inputfile = blazar_analysis.iterate_run(
+        inputfile = flaires_analysis.iterate_run(
             n_trials=args.n_trials,
-            injection_hypo=AverageFluxWeightHypothesis,
+            injection_hypo=FluencebolHypothesis,
             fraction=args.fraction,
             n_steps=args.n_steps,
             chunksize=10,
+            
         )
     else:
         inputfile = args.input
 
     # Get the TS with the real data
-    base_cat = Fermi4FGLBlazarCatalogue()
+    base_cat = FlairesCatalogue()
     
     cat = base_cat.scramble() # remove this line to use the real direction of the blazars
     #cat = base_cat.data
     
     
-    for name, hypo in blazar_analysis.hypos.items():
+    for name, hypo in flaires_analysis.hypos.items():
         # save a list with information of correlations
         ts = hypo.calculate_llh(cat, savedata=analysis_cache_dir) 
 
     # Load the results from the trials
-    all_res = blazar_analysis.load_results(filename=inputfile)
+    all_res = flaires_analysis.load_results(
+        filename=inputfile
+    )
 
     # Get the TS distribution of the background
-    ts_handler = TSHandler(all_res, blazar_analysis)
-    gd = ts_handler.find_thresholds_gamma()
+    ts_handler = TSHandler(all_res, flaires_analysis)
+    ts_handler.find_thresholds_from_data()
     key = list(ts_handler.sens_threshold.keys())[0]
     val_bkg = all_res[0][key]
-    ts_handler.plot_ts(val_bkg, key, gd=gd, bins=30, ts=ts) # Plot TS distribution of bkg + TS_data
+    ts_handler.plot_ts(val_bkg, key, bins=30, ts=ts) # Plot TS distribution of bkg + TS_data
 
-    plt.title(f"4LAC-DR3 (12y integrated flux) + IceCat-2 -> {len(
+    plt.title(f"Flaires + IceCat-2 -> {len(
         val_bkg
     ):.1e} Scrambles")
     plt.savefig(
-        figures_folder + "4LACDR3_integrated_scrambles_result",
+        figures_folder + "Flaires_scrambles_result",
         bbox_inches="tight",
         dpi=200
     )
     plt.savefig(
-        figures_folder + "4LACDR3_integrated_scrambles_result.pdf",
+        figures_folder + "Flaires_scrambles_result.pdf",
         bbox_inches="tight",
         dpi=200
     )
     
     # Calculate and print p-value
-    pv_int = gd.dist.sf(ts)
     pv_cnt = sum(np.array(val_bkg)[val_bkg>ts])/sum(val_bkg)
     
     print('\n###### Global p-value ################################\n')
-    print(f'Integrating gamma distribution: p-value = {pv_int:.4e} ({stats.norm.ppf(1-pv_int):.2f} sigmas)') 
     print(f'Counting bins: p-value = {pv_cnt:.4e} ({stats.norm.ppf(1-pv_cnt):.2f} sigmas)')
     print('\n######################################################')

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 from alertstack.stats import TSHandler
-from examples.fermi_blazar_neutrino_alert import blazar_analysis
+from original_examples.fermi_blazar_neutrino_alert import blazar_analysis
 
 if __name__ == "__main__":
     
