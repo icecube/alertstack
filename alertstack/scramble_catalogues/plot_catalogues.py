@@ -29,8 +29,8 @@ if __name__ == "__main__":
     plot_catalogue(
         AccretionFlaresSjoertCatalogue(),
         15,
-        "Nuclear Flares",
-        "63 Nuclear Flares",
+        "Accretion Flares",
+        "63 Accretion Flares",
         weighter=StrengthFluxWeightHypothesis(
             HealpixNeutrinoAlertCatalogue()
         ),
@@ -50,8 +50,8 @@ if __name__ == "__main__":
     plot_catalogue(
         AccretionFlaresSjoertCatalogue(),
         15,
-        "Nuclear Flares",
-        "63 Nuclear Flares",
+        "Accretion Flares",
+        "63 Accretion Flares",
     )
     plt.savefig(
         os.path.join(figures_folder,"sjoert_accr_flares_data"),
@@ -67,8 +67,8 @@ if __name__ == "__main__":
     plot_catalogue(
         AccretionFlaresSjoertCatalogue(),
         15,
-        "Nuclear Flares",
-        "63 Nuclear Flares",
+        "Accretion Flares",
+        "63 Accretion Flares",
         scramble=True,
     )
     plt.savefig(
@@ -80,8 +80,8 @@ if __name__ == "__main__":
     plot_catalogue(
         AccretionFlaresSjoertCatalogue(),
         15,
-        "Nuclear Flares",
-        "63 Nuclear Flares",
+        "Accretion Flares",
+        "63 Accretion Flares",
         scramble=True,
     )
     plt.savefig(
@@ -93,8 +93,8 @@ if __name__ == "__main__":
     plot_catalogue(
         AccretionFlaresSjoertCatalogue(),
         15,
-        "Nuclear Flares",
-        "63 Nuclear Flares",
+        "Accretion Flares",
+        "63 Accretion Flares",
         scramble=True,
     )
     plt.savefig(
@@ -106,8 +106,8 @@ if __name__ == "__main__":
     plot_catalogue(
         AccretionFlaresSjoertCatalogue(),
         15,
-        "Nuclear Flares",
-        "63 Nuclear Flares",
+        "Accretion Flares",
+        "63 Accretion Flares",
         nside=4,
     )
     plt.savefig(
@@ -119,8 +119,8 @@ if __name__ == "__main__":
     plot_catalogue(
         AccretionFlaresSjoertCatalogue(),
         15,
-        "Nuclear Flares",
-        "63 Nuclear Flares",
+        "Accretion Flares",
+        "63 Accretion Flares",
         final_pdf=True,
     )
     plt.savefig(
