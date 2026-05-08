@@ -150,6 +150,7 @@ def plot_catalogue(
     final_pdf=False,
     scramble=False,
     scramble_size=20,
+    legend=True
 ):
     """Plot a catalogue with an aitoff projection
 
@@ -171,6 +172,8 @@ def plot_catalogue(
         Plot binning of sources with the desired nside
     scramble: `bool`
         Show the example of a scramble
+    legend: `bool`
+        Include or not the legend
     """
 
     catalogue = catalogue_obj.parse_data()
@@ -214,7 +217,8 @@ def plot_catalogue(
     plot_gp_coords(catalogue_obj.gp_threshold)
     plot_dec_cut(catalogue_obj.min_declination)
 
-    plt.legend(loc=(-0.15, 0.95), fontsize='large')
+    if legend:
+        plt.legend(loc=(-0.15, 0.95), fontsize='large')
     if weighter is not None:
         cb = plt.gcf().colorbar(im)
         cb.ax.tick_params(labelsize="large")

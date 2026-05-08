@@ -129,6 +129,21 @@ if __name__ == "__main__":
         bbox_inches="tight"
     )
     plt.close()
+    plot_catalogue(
+        AccretionFlaresSjoertCatalogue(),
+        15,
+        "Accretion Flares",
+        "63 Accretion Flares",
+        final_pdf=True,
+        legend=False,
+    )
+    plt.savefig(
+        os.path.join(figures_folder,"sjoert_accr_flares_pdf_nolegend"),
+        dpi=150,
+        bbox_inches="tight"
+    )
+    plt.close()
+
 
 
     # Flaires catalogue
