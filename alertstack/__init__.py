@@ -81,8 +81,8 @@ class Catalogue:
     """Basic class for any type of catalogue (of neutrinos or astrophysical sources).
     """
 
-    def __init__(self):
-        self.data = self.parse_data()
+    def __init__(self, name_cat=None):
+        self.data = self.parse_data(name_cat=name_cat)
 
     @staticmethod
     def parse_data(name_cat=None):
@@ -135,8 +135,8 @@ class ScrambleCatalogue(Catalogue):
     """Class for catalogues of astrophysical sources (that are scrambled).
     """
 
-    def __init__(self):
-        Catalogue.__init__(self)
+    def __init__(self, name_cat=None):
+        Catalogue.__init__(self, name_cat=name_cat)
         self.gp_threshold = self.set_gp_threshold()
         self.min_declination = self.set_min_declination()
         self.numap_nside = 1024
@@ -171,8 +171,8 @@ class IsotropicExtragalacticCatalogue(ScrambleCatalogue):
     (at least in part of the sky).
     """
 
-    def __init__(self):
-        ScrambleCatalogue.__init__(self)
+    def __init__(self, name_cat=None):
+        ScrambleCatalogue.__init__(self, name_cat=name_cat)
         self.set_bkg_pdf_per_source(self.data)
 
     def scramble_positions_outside_GP(self, gp_cut=10., min_dec_deg=-90.):
@@ -277,8 +277,8 @@ class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
     """Class for catalogues of astrophysical sources that are anisotropic.
     """
 
-    def __init__(self):
-        ScrambleCatalogue.__init__(self)
+    def __init__(self, name_cat=None):
+        ScrambleCatalogue.__init__(self, name_cat=name_cat)
         self.nside = self.set_nside()
         self.npix = self.set_npix()
         self.bkg_distribution = self.set_bkg_distribution()
