@@ -85,8 +85,13 @@ class Catalogue:
         self.data = self.parse_data()
 
     @staticmethod
-    def parse_data():
+    def parse_data(name_cat=None):
         """Load the catalogue.
+
+        Parameters
+        ----------
+        name_cat: `str | None`
+            Possibility to specify the name of the catalog to use.
         """
         return NotImplementedError
 

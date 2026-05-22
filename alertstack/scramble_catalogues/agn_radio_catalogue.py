@@ -16,7 +16,7 @@ class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
     '''
 
     @staticmethod
-    def parse_data():
+    def parse_data(name_cat='rfc_2025c_cat.txt'):
         """Load the catalogue.
         """
 
@@ -25,10 +25,6 @@ class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
 
         d = []
 
-        # name_cat = 'rfc_2020c_cat.txt'
-        name_cat = 'rfc_2025c_cat.txt'
-        # name_cat = 'rfc_2022a_cat.txt'
-        # with open(os.path.join(alertstack_data_dir,'rfc_2025c_cat.txt'), 'r') as f:
         with open(os.path.join(alertstack_data_dir, name_cat), 'r') as f:
             for line in f:
                 if not line.startswith('#'):
