@@ -25,6 +25,9 @@ class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
             Possibility to specify the name of the catalog to use.
         """
 
+        if name_cat is None:
+            name_cat = 'rfc_2025c_cat.txt'
+
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
 

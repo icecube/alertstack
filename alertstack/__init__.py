@@ -278,10 +278,7 @@ class AnisotropicExtragalacticCatalogue(ScrambleCatalogue):
     """
 
     def __init__(self, name_cat=None):
-        if name_cat is None:
-            ScrambleCatalogue.__init__(self)
-        else:
-            ScrambleCatalogue.__init__(self, name_cat=name_cat)
+        ScrambleCatalogue.__init__(self, name_cat=name_cat)
         self.nside = self.set_nside()
         self.npix = self.set_npix()
         self.bkg_distribution = self.set_bkg_distribution()
