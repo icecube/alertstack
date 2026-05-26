@@ -18,6 +18,11 @@ class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
     @staticmethod
     def parse_data(name_cat='rfc_2025c_cat.txt'):
         """Load the catalogue.
+
+        Parameters
+        ----------        
+        name_cat: `str | None`
+            Possibility to specify the name of the catalog to use.
         """
 
         logger = logging.Logger("default_logger")

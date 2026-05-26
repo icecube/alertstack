@@ -32,9 +32,15 @@ class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
     '''
 
     @staticmethod
-    def parse_data():
+    def parse_data(name_cat=None):
         ''' Loads Fermi 4LAC-DR, selects blazars, and applies a cut
         on the energy flux and on the latitude.
+
+        Parameters
+        ----------        
+        name_cat: `str | None`
+            Possibility to specify the name of the catalog to use.
+            (Not used here).
         '''
 
         logger = logging.Logger("default_logger")

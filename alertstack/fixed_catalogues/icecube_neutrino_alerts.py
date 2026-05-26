@@ -244,8 +244,14 @@ class CircularisedNeutrinoAlertCatalogue(FixedCatalogue):
     '''
     
     @staticmethod
-    def parse_data():
+    def parse_data(name_cat=None):
         """Load the catalogue.
+
+        Parameters
+        ----------        
+        name_cat: `str | None`
+            Possibility to specify the name of the catalog to use.
+            (Not used here).
         """
         nu_objs = []
         with open(os.path.join(
@@ -311,8 +317,14 @@ class HealpixNeutrinoAlertCatalogue(FixedCatalogue):
     '''
     
     @staticmethod
-    def parse_data():
+    def parse_data(name_cat=None):
         """Load the catalogue.
+
+        Parameters
+        ----------        
+        name_cat: `str | None`
+            Possibility to specify the name of the catalog to use.
+            (Not used here).
         """
         nu_objs = []
 
