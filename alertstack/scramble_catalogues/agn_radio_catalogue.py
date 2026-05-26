@@ -33,7 +33,7 @@ class AstrogeoAGNCatalogue(AnisotropicExtragalacticCatalogue):
         with open(os.path.join(alertstack_data_dir, name_cat), 'r') as f:
             for line in f:
                 if not line.startswith('#'):
-                    if name_cat == 'rfc_2020c_cat.txt' or name_cat == 'rfc_2022a_cat.txt' or name_cat == 'rfc_2022b_cat.txt':
+                    if name_cat == 'rfc_2020c_cat.txt' or name_cat == 'rfc_2022a_cat.txt' or name_cat == 'rfc_2022b_cat.txt' or name_cat == 'rfc_2019d_cat.txt' :
                         d.append(
                             {
                                 'Category': line.split()[0], 
