@@ -174,7 +174,7 @@ class TSHandler:
         plt.legend()
 
 
-    def extract_sens_dp(self, extent=0.2, only_sens=False):
+    def extract_sens_dp(self, extent=0.2, only_sens=False, misinterpreted=False,):
         """Extrapolate percentages of astrophysical neutrino flux
         necessary to get a TS higher than signalness, 3-sigma,
         and 5 sigma discovery potential.
@@ -185,6 +185,8 @@ class TSHandler:
             max extent to extrapolate percentages.
         only_sens: `bool`
             Option to extract only the sensitivity
+        misinterpreted: `bool`
+            The signalness interpretation is handled as before the bugfix
         """
         
         levels = [
@@ -202,6 +204,8 @@ class TSHandler:
         # in the 'above' dictionary
         for step, res in self.results.items():
             frac = step / ( ASTROPURITY_GOLD_BRONZE * self.n_events )
+            if misinterpreted:
+                frac = step
             print(
                 "\nFraction of neutrino alerts correlated"
                 " to source: {0} \n".format(frac)
@@ -240,11 +244,14 @@ class TSHandler:
         
         # Calculate flux needed to achieve sensitivity
         # and discovery potential
+        astropurity_factor = ASTROPURITY_GOLD_BRONZE
+        if misinterpreted:
+            astropurity_factor = self.avg_signalness
         print(
             "\n------- Sensitivity and discovery potential with "
             "{0} neutrino alerts"
             " (average signalness: {1:.1f} %) --------\n".format(
-                self.n_events, 100*ASTROPURITY_GOLD_BRONZE
+                self.n_events, 100*astropurity_factor
             )
         )
         
@@ -257,27 +264,27 @@ class TSHandler:
             "Sensitivity at {0:.3f} of flux,"
             " expectation of {1:.1f}/{2} = {3:.3f}".format(
                 self.x1,
-                (self.x1*ASTROPURITY_GOLD_BRONZE)*self.n_events,
+                (self.x1*astropurity_factor)*self.n_events,
                 self.n_events,
-                (self.x1*ASTROPURITY_GOLD_BRONZE))
+                (self.x1*astropurity_factor))
         )
         if not only_sens:
             print(
                 "3 Sigma discovery at {0:.3f} of flux,"
                 " expectation of {1:.1f}/{2} = {3:.3f}".format(
                     self.x2,
-                    (self.x2*ASTROPURITY_GOLD_BRONZE)*self.n_events,
+                    (self.x2*astropurity_factor)*self.n_events,
                     self.n_events,
-                    (self.x2*ASTROPURITY_GOLD_BRONZE)
+                    (self.x2*astropurity_factor)
                 )
             )
             print(
                 "5 Sigma discovery at {0:.3f} of flux,"
                 " expectation of {1:.1f}/{2} = {3:.3f}".format(
                     self.x3,
-                    (self.x3*ASTROPURITY_GOLD_BRONZE)*self.n_events,
+                    (self.x3*astropurity_factor)*self.n_events,
                     self.n_events,
-                    (self.x3*ASTROPURITY_GOLD_BRONZE)
+                    (self.x3*astropurity_factor)
                 )
         )
         print(
