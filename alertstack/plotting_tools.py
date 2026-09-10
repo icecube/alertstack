@@ -56,7 +56,7 @@ def plot_gp_coords(gp_cut):
             1,
             color="black",
             linestyle='dotted',
-            label=f"|gal lat| = {int(gp_cut)} deg",
+            label=f"|Gal lat| = {int(gp_cut)} deg",
             linewidth=2
         )
         plt.scatter(ra_vals_aitoff_p, dec_vals_p, s=1.5, c="black")
