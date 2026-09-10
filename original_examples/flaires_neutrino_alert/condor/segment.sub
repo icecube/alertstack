@@ -1,0 +1,11 @@
+executable = /mnt/ceph1-npx/user/gsommani/wg-nu-sources-official/2026_Alertstack_IceCat2/examples/flaires_neutrino_alert/run_flaires_analysis.sh
+arguments =  --n_trials 10000 --fraction 0.07 --n_steps 10 --tag flaires_n10000_f0.07_s10_N$(i)
+log = flaires_n10000_f0.07_s10_N$(i).log
+output = flaires_n10000_f0.07_s10_N$(i).out
+error = flaires_n10000_f0.07_s10_N$(i).err
+request_cpus = 32
+request_memory = 16GB
+request_disk = 32GB
+should_transfer_files = yes
+
+queue

@@ -1,138 +1,434 @@
-import scipy
-from scipy.stats import norm
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+
+from alertstack import ASTROPURITY_GOLD_BRONZE
+from scipy import interpolate
+from scipy.optimize import bisect
+from scipy.stats import norm
+
+
+class TSHandler:
+    '''Class to handle the TS results from the various
+    analyses.
+
+    Parameters
+    ----------
+    results: `dict`
+        Results from an analysis
+    analysis: `alertstack.Analyse`
+        The analysis involved for the statistics
+    max_run: `int`
+        Last run to consider for the neutrinos
+    evttype: `str`
+        Select all neutrinos ('ALL'), only LED neutrinos ('LED),
+        or only HED neutrinos ('HED')
+    old: `bool`
+        The results are from the previous analysis of Cristina
+    '''
+
+    PROB_3S = 1.35e-3
+    PROB_5S = 2.87e-7
+
+    def __init__(
+        self,
+        results,
+        analysis,
+        max_run=142135,
+        evttype="ALL",
+        old=False,
+    ):
+        addition = 0
+        if old:
+            max_run = 134818
+            addition = 8 # 8 CR events were included in the older catalog
+        self.results = results
+        self.sens_threshold = dict()
+        self.disc_3_threshold = dict()
+        self.disc_5_threshold = dict()
+        runs = np.array([nu.runid for nu in analysis.fixed_sources])
+        evttypes = np.array([nu.evttype for nu in analysis.fixed_sources])
+        if evttype == "ALL":
+            typemask = np.empty(len(evttypes))
+            typemask.fill(True)
+        else:
+            typemask = evttypes == evttype
+        tmp = np.array(
+            [i.weight for i in analysis.fixed_sources]
+        )[(runs<=max_run) & (typemask==1)]
+        self.avg_signalness = np.mean(tmp)
+        self.n_events = len(tmp) + addition
+        self.x1 = None
+        self.x2 = None
+        self.x3 = None
+        self.fracs = []
+        self.sens = []
+        self.sig3 = []
+        self.sig5 = []
+
+
+    def find_thresholds_gamma(self):
+        '''Find thresholds in TS for sensitivity, 3 sigma, and 5 sigma
+        discovery potential assuming a gamma distribution.
+        '''
+        
+        for key, val in self.results[0.].items():
+            self.sens_threshold[key] = np.median(val)
+            gd = GammaDistribution(val)
+            self.disc_3_threshold[key] = gd.calculate_discovery_potential(3.)
+            self.disc_5_threshold[key] = gd.calculate_discovery_potential(5.)
+
+        return gd
+
+    def find_thresholds_from_data(self):
+        '''Find thresholds in TS for sensitivity, 3 sigma, and 5 sigma
+        discovery potential using the data and not assuming any
+        distribution.
+        '''
+        
+        for key, val in self.results[0.].items():
+            self.sens_threshold[key] = np.median(val)
+            decreasing_vals = np.flip(np.sort(val))
+            done_3s = False
+            done_5s = False
+            if len(val) <= int(1./self.PROB_3S):
+                print("Not enough scrambles for evaluating a 3 and 5 sigma level")
+                self.disc_3_threshold[key] = decreasing_vals[0]
+                self.disc_5_threshold[key] = decreasing_vals[0]
+                done_3s = True
+                done_5s = True
+            elif len(val) <= int(1./self.PROB_5S):
+                print("Not enough scrambles for evaluating a 5 sigma level")
+                self.disc_5_threshold[key] = decreasing_vals[0]
+                done_5s = True
+        
+            for i, v in enumerate(decreasing_vals):
+                prob = (i + 1) / len(val)
+                if prob >= self.PROB_3S and not done_3s:
+                    self.disc_3_threshold[key] = v
+                    done_3s = True
+                if prob >= self.PROB_5S and not done_5s:
+                    self.disc_5_threshold[key] = v
+                    done_5s = True
+
+    
+    def plot_ts(self, val, key, gd=None, bins=30, density=True, ts=None):
+        '''plot TS + sensitivity and disc potential
+
+        Parameters
+        ----------
+        val: `list`
+            The TS data
+        key: `str`
+            Key that describes the investigated model
+        gd: `None | alertstack.stats.GammaDistribution`
+            If given, gamma distribution that fits the TS
+        bins: `int`
+            Number of bins for the histogram
+        density: `bool`
+            Shows density or absolute number of scrambles
+        ts: `float | None`
+            real test statistic to plot
+        '''
+        sens = self.sens_threshold[key]
+        disc_3 = self.disc_3_threshold[key]
+        disc_5 = self.disc_5_threshold[key]
+        data = np.array(val)
+        counts, bins_pos, _ = plt.hist(data, bins=bins, alpha=0.)
+        bins_centers = (bins_pos[:-1] + bins_pos[1:])/2.
+        bins_widths = (bins_pos[1:] - bins_pos[:-1])/2.
+        if density:
+            db = np.array(np.diff(bins_pos), float)
+            counts_sum = counts.sum()
+            counts =  counts / db / counts_sum
+            errs = np.sqrt(counts * db * counts_sum) / (db * counts_sum)
+            plt.ylabel("Density")
+        else:
+            errs = np.sqrt(counts)
+            plt.ylabel("Scrambles")
+        x_range = np.logspace(np.log10(min(data[data>0.])), np.log10(max(data)), 100)
+        if gd is not None:
+            x_range = np.logspace(
+                np.log10(min(data[data>0.])),
+                np.log10(max(list(data)+[disc_5])),
+                100
+            )
+            plt.plot(x_range, gd.dist.pdf(x_range))
+            plt.ylim(gd.dist.pdf(disc_5)/4, max(counts)*4)
+        if ts is not None:
+            plt.axvline(ts, color="red", linewidth=2, label="Real data")
+        plt.errorbar(
+            bins_centers,
+            counts,
+            errs,
+            bins_widths,
+            linestyle="",
+            color="black",
+        )
+        plt.ylim(min(counts[counts!=0.])/8, max(counts[counts!=0.])*4)
+        plt.xlabel('TS')
+        plt.yscale('log')
+        plt.axvline(sens, color = 'tab:orange', ls='--', label='Sensitivity')
+        plt.axvline(disc_3, color = 'tab:orange', ls='-.', label='3sigma disc')
+        plt.axvline(disc_5, color = 'tab:orange', ls='dotted', label='5sigma disc')
+        plt.legend()
+
+
+    def extract_sens_dp(self, extent=0.2, only_sens=False, misinterpreted=False,):
+        """Extrapolate percentages of astrophysical neutrino flux
+        necessary to get a TS higher than signalness, 3-sigma,
+        and 5 sigma discovery potential.
+
+        Parameters
+        ----------
+        extent: `float`
+            max extent to extrapolate percentages.
+        only_sens: `bool`
+            Option to extract only the sensitivity
+        misinterpreted: `bool`
+            The signalness interpretation is handled as before the bugfix
+        """
+        
+        levels = [
+            ("Background Median", self.sens_threshold),
+            ("3 Sigma Discovery Potential", self.disc_3_threshold),
+            ("5 Sigma Discovery Potential", self.disc_5_threshold)
+        ]
+        if only_sens:
+            levels = [("Background Median", self.sens_threshold)]
+        
+        above = dict()
+        
+        # Calculate for each step the fraction of trials that are above
+        # a certain threshold and store the information
+        # in the 'above' dictionary
+        for step, res in self.results.items():
+            frac = step / ( ASTROPURITY_GOLD_BRONZE * self.n_events )
+            if misinterpreted:
+                frac = step
+            print(
+                "\nFraction of neutrino alerts correlated"
+                " to source: {0} \n".format(frac)
+            )
+        
+            bkgs = dict()
+            temp = []
+        
+            for key, val in res.items():
+                val = np.array(val)
+        
+                for name, thresh in levels:
+                    print("Fraction above {0}: {1}".format(
+                        name, np.sum(val > thresh[key])/float(len(val))))
+                    temp.append(np.sum(val > thresh[key])/float(len(val)))        
+            above[frac] = temp
+        
+        self.fracs = list(above.keys())
+        self.sens = [list(
+            above.values()
+        )[i][0] for i in range(len(self.fracs))]
+        if not only_sens:
+            self.sig3 = [list(
+                above.values()
+            )[i][1] for i in range(len(self.fracs))]
+            self.sig5 = [list(
+                above.values()
+            )[i][2] for i in range(len(self.fracs))]
+        
+        # Interpolate a curve to the data points of
+        # the fraction of trials above each threshold
+        f1 = interpolate.interp1d(self.fracs, self.sens, kind='cubic')
+        if not only_sens:
+            f2 = interpolate.interp1d(self.fracs, self.sig3, kind='cubic')
+            f3 = interpolate.interp1d(self.fracs, self.sig5, kind='cubic')
+        
+        # Calculate flux needed to achieve sensitivity
+        # and discovery potential
+        astropurity_factor = ASTROPURITY_GOLD_BRONZE
+        if misinterpreted:
+            astropurity_factor = self.avg_signalness
+        print(
+            "\n------- Sensitivity and discovery potential with "
+            "{0} neutrino alerts"
+            " (average signalness: {1:.1f} %) --------\n".format(
+                self.n_events, 100*astropurity_factor
+            )
+        )
+        
+        self.x1 = bisect(lambda x: f1(x)-0.9, 0, extent, xtol=1e-6)
+        if not only_sens:
+            self.x2 = bisect(lambda x: f2(x)-0.5, 0, extent, xtol=1e-6)
+            self.x3 = bisect(lambda x: f3(x)-0.5, 0, extent, xtol=1e-6)
+        
+        print(
+            "Sensitivity at {0:.3f} of flux,"
+            " expectation of {1:.1f}/{2} = {3:.3f}".format(
+                self.x1,
+                (self.x1*astropurity_factor)*self.n_events,
+                self.n_events,
+                (self.x1*astropurity_factor))
+        )
+        if not only_sens:
+            print(
+                "3 Sigma discovery at {0:.3f} of flux,"
+                " expectation of {1:.1f}/{2} = {3:.3f}".format(
+                    self.x2,
+                    (self.x2*astropurity_factor)*self.n_events,
+                    self.n_events,
+                    (self.x2*astropurity_factor)
+                )
+            )
+            print(
+                "5 Sigma discovery at {0:.3f} of flux,"
+                " expectation of {1:.1f}/{2} = {3:.3f}".format(
+                    self.x3,
+                    (self.x3*astropurity_factor)*self.n_events,
+                    self.n_events,
+                    (self.x3*astropurity_factor)
+                )
+        )
+        print(
+            "\n------------------------------------------------------"
+            "----------------------------------------------------\n"
+        )
+
+    
+    def plot_sens_dp(self, data_derived=True):
+        """Plot results of signal injections to get percentages of
+        astrophysical neutrino flux for test statistic higher
+        than signalness, 3-sigma, and 5-sigma discovery potential
+
+        Parameters
+        ----------
+        data_derived: `bool`
+            Specifies if the background distribution is data-derived or
+            assumed as isotropic
+        """
+        
+        plt.axhline(0.5, color="black", linestyle="dotted")
+        plt.axhline(0.9, color="black", linestyle="dashed")
+        
+        plt.axvline(
+            self.x1,
+            linestyle="dashdot",
+            label=f"Sensitivity ({(
+                self.x1*ASTROPURITY_GOLD_BRONZE
+            )*self.n_events:.1f} alerts)"
+        )
+        plt.axvline(
+            self.x2,
+            linestyle="dashdot",
+            color="tab:orange",
+            label=r"3-$\sigma$ discovery potential"
+            f"\n({(self.x2*ASTROPURITY_GOLD_BRONZE)*self.n_events:.1f} alerts)"
+        )
+        plt.axvline(
+            self.x3,
+            linestyle="dashdot",
+            color="tab:green",
+            label=r"5-$\sigma$ discovery potential"
+            f"\n({(self.x3*ASTROPURITY_GOLD_BRONZE)*self.n_events:.1f} alerts)"
+        )
+        data_derived_string = "Assumption of isotropic catalog"
+        if data_derived:
+            data_derived_string = "Data-derived background distribution"
+        plt.title(
+            f"{self.n_events} neutrino alerts\n"
+            f"{data_derived_string}\n"
+            f"astrophysical neutrino purity {round(100*ASTROPURITY_GOLD_BRONZE,1)}%, "
+            f"~{round(self.n_events*ASTROPURITY_GOLD_BRONZE)}"
+            " astrophysical neutrinos"
+        )
+        plt.plot(
+            self.fracs,
+            self.sens,
+            marker='o',
+            label="Fraction above median TS"
+        )
+        plt.plot(
+            self.fracs,
+            self.sig3,
+            marker='o',
+            label=r"Fraction above 3-$\sigma$ level"
+        )
+        plt.plot(
+            self.fracs,
+            self.sig5,
+            marker='o',
+            label=r"Fraction above 5-$\sigma$ level"
+        )
+
+        def frac_to_nus(frac):
+            return frac * self.n_events * ASTROPURITY_GOLD_BRONZE
+        def nus_to_frac(nus):
+            return nus / (self.n_events * ASTROPURITY_GOLD_BRONZE)
+        
+        secax = plt.gca().secondary_xaxis(
+            -0.15, functions=(frac_to_nus, nus_to_frac)
+        )
+        secax.set_xlabel("Number of astrophysical neutrinos")
+        
+        plt.ylabel("Fraction of samples")
+        plt.xlabel(
+            "Fraction of astrophysical neutrino alerts correlated to source"
+        )
+
 
 class GammaDistribution:
+    '''This class receives the background TS distribution
+    and fits it to a gamma distribution. The function
+    'calculate_discovery_potential' calculates the value
+    of TS needed to get the discovery potential
+
+    Parameters
+    ----------
+    data: `numpy.array | list`
+        The array with the TS values
+    '''
 
     def __init__(self, data):
 
-        # default_loc = min(data) - 1e-9
+        # prepare the data
         default_loc = min(data) - 1.
         data = np.array(data)
         cut = min(data)
         mask = data > cut
 
-
         self.frac_under = np.sum(~mask)/float(len(mask))
-        # self.frac_under = 0.
-
-        # left = data > min(data)
-
         N_left = np.sum(~mask)
-        # data = data[mask]
-        weights = np.ones_like(data) / float(len(data))
-        mask = np.ones_like(data, dtype=np.int)
 
+        # define initial guess parameters and bounds for minimization
         p_start = [9., default_loc, 0.5]
         p_bounds = [(0, None),
                     (None, default_loc + 0.99),
                     (1e-5, 1e5)
                     ]
 
+        # define likelihood function to minimize to obtain the parameters that 
+        # better match the data
         def func(p):
             dist = scipy.stats.gamma(p[0], loc=p[1], scale=p[2])
             loglh = dist.logpdf(data).sum()
             loglh += N_left * dist.cdf(cut)
             return -loglh
 
+        # minimize 
         self.res = scipy.optimize.minimize(func, x0=p_start, bounds=p_bounds)
         print(self.res)
-        self.dist = scipy.stats.gamma(self.res["x"][0], loc=self.res["x"][1], scale=self.res["x"][2])
+        # define gamma distribution that represents the background TS distribution
+        self.dist = scipy.stats.gamma(
+            self.res["x"][0],
+            loc=self.res["x"][1],
+            scale=self.res["x"][2]
+        )
 
     def calculate_discovery_potential(self, sigma=5.):
+        """Calculate the discovery given the Gamma distribution
+
+        Parameters
+        ----------
+        sigma: `float`
+            Number of sigmas corresponding to the discovery potential.
+        """
         threshold = (norm.cdf(sigma) - self.frac_under)/(1 - self.frac_under)
         return self.dist.ppf(threshold)
-
-# def plot_background_ts_distribution(ts_array, path, ts_type="Standard",
-#                                     ts_val=None):
-#
-#     try:
-#         os.makedirs(os.path.dirname(path))
-#     except OSError:
-#         pass
-#
-#     ts_array = np.array(ts_array)
-#     ts_array = ts_array[~np.isnan(ts_array)]
-#
-#     if np.sum(np.isnan(ts_array)) > 0:
-#         print("TS distribution has", np.sum(np.isnan(ts_array)), "nan entries.")
-#
-#     fig = plt.figure()
-#
-#     df, loc, scale, frac_over = fit_background_ts(ts_array, ts_type)
-#
-#     frac_under = 1 - frac_over
-#
-#     five_sigma = (raw_five_sigma - frac_under) / (1. - frac_under)
-#
-#     plt.axhline(frac_over * (1 - five_sigma), color="r", linestyle="--")
-#
-#     max_ts = np.max(ts_array)
-#
-#     disc_potential = scipy.stats.chi2.ppf(five_sigma, df, loc, scale)
-#
-#     x_range = np.linspace(0., max(max_ts, disc_potential), 100)
-#
-#     plt.plot(x_range, frac_over * scipy.stats.chi2.pdf(x_range, df, loc, scale),
-#              color="blue", label=r"$\chi^{2}$ Distribution")
-#
-#     def integral(x):
-#
-#         return (frac_under * np.sign(x) + frac_over *
-#                 (scipy.stats.chi2.cdf(x, df, loc, scale)))
-#
-#     plt.plot(x_range, 1. - integral(x_range), color="green", linestyle="--",
-#              label=r"1 - $\int f(x)$ (p-value)")
-#
-#     plt.axvline(disc_potential, color="r", label=r"5 $\sigma$ Threshold")
-#
-#     if ts_val is not None:
-#         print("\n")
-#
-#         if not isinstance(ts_val, float):
-#             ts_val = float(ts_val[0])
-#
-#         # print
-#
-#         print("Quantifying TS:", "{:.2f}".format(ts_val))
-#
-#         if ts_val > np.median(ts_array):
-#
-#             val = (ts_val - frac_under) / (1. - frac_under)
-#
-#             cdf = frac_under + frac_over * scipy.stats.chi2.cdf(
-#                 val, df, loc, scale)
-#
-#             sig = norm.ppf(cdf)
-#
-#         else:
-#             cdf = 0.
-#             sig = 0.
-#
-#         print("Pre-trial P-value is", "{:.2E}".format(1-cdf), 1-cdf)
-#         print("Significance is", "{:.2f}".format(sig), "Sigma")
-#         print("\n")
-#
-#         plt.axvline(ts_val, color="purple",
-#                     label="{:.2f}".format(ts_val) + " TS/" +
-#                     "{:.2f}".format(sig) + r" $\sigma$")
-#
-#     else:
-#         plt.annotate(
-#             '{:.1f}'.format(100 * frac_under) + "% of data in delta. \n" +
-#             r"$\chi^{2}$ Distribution:" + "\n   * d.o.f.=" + \
-#             '{:.2f}'.format(df) + ",\n  * loc=" + '{:.2f}'.format(loc) + \
-#             " \n * scale=" + '{:.2f}'.format(scale),
-#             xy=(0.1, 0.2), xycoords="axes fraction", fontsize=8)
-#
-#     yrange = min(1. / (float(len(ts_array)) * n_bins),
-#                  scipy.stats.chi2.pdf(disc_potential, df, loc, scale))
-#
-#     plt.yscale("log")
-#     plt.xlabel(r"Test Statistic ($\lambda$)")
-#     plt.legend(loc="upper right")
-#     plt.savefig(path)
-#     plt.close()
-#
-#     return disc_potential

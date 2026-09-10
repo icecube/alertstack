@@ -1,156 +1,182 @@
-from astropy.io import fits
-import numpy as np
-import os
+import copy
+import healpy as hp
 import logging
-from alertstack import IsotropicExtragalacticCatalogue, Hypothesis, is_outside_GP, alertstack_data_dir
-from numpy.lib.recfunctions import rename_fields
+import numpy as np
 import pandas as pd
+import pickle as pkl
+import os
+
+from alertstack import (
+    alertstack_data_dir,
+    Hypothesis,
+    is_outside_GP,
+    IsotropicExtragalacticCatalogue,
+)
 from astropy import units as u
-from astropy.coordinates import SkyCoord, ICRS
+from astropy.io import fits
+from numpy.lib.recfunctions import rename_fields
+from pathlib import Path
+
+# Load the lightcurves (LC) to evaluate the monthly gamma-ray flux.
+try:
+    a = Path(alertstack_data_dir) / 'weights_LC.pkl'
+    with a.open('rb') as f:
+        data_lc = pkl.load(f)
+except KeyError:
+    logging.warning("The weights from the light curves could not be loaded. If you do not have them, importing MonthlyFluxWeightHypothesis will raise an error.")
+
 
 class Fermi4FGLBlazarCatalogue(IsotropicExtragalacticCatalogue):
+    ''' Loads Fermi 4LAC-DR, selects blazars, and applies a cut
+    on the energy flux and on the latitude.
+    '''
 
     @staticmethod
-    def parse_data():
+    def parse_data(name_cat=None):
+        ''' Loads Fermi 4LAC-DR, selects blazars, and applies a cut
+        on the energy flux and on the latitude.
+
+        Parameters
+        ----------        
+        name_cat: `str | None`
+            Possibility to specify the name of the catalog to use.
+            (Not used here).
+        '''
 
         logger = logging.Logger("default_logger")
         logger.setLevel("DEBUG")
 
-        with fits.open(os.path.join(alertstack_data_dir, "table-4LAC-DR2-h.fits")) as hdul: # table_4LAC
-            cat = hdul[1].data
-        cat = np.sort(cat, order="Energy_Flux100")[::-1]#Energy_Flux100
+        # Load catalog
+        with fits.open(os.path.join(alertstack_data_dir, "table-4LAC-DR3-h.fits")) as hdul:
+            cat = pd.DataFrame(hdul[1].data)
+        for key in cat.keys():
+            if cat[key].dtype == '>f8':
+                cat[key] = cat[key].astype('f8')
+        cat["Energy_Flux100"] = cat["Energy_Flux100"].astype('f8')
+        cat = cat.sort_values("Energy_Flux100", ascending=False)
 
+        # Select blazars
         logging.info("Selecting blazars from 4FGL catalogue")
 
         blazar_class = ["bll", "BLL", "fsrq", "FSRQ", "bcu", "BCU"]
 
         logging.info("Using all sources from class {0}".format(blazar_class))
-        #
-        mask = np.array([x["CLASS"] in blazar_class for x in cat])
-        blazars = np.array(cat[mask])
+        mask = np.array([df_class in blazar_class for df_class in cat["CLASS"]])
+        blazars = cat[mask]
 
+        # Apply cut on energy flux
         cut_e = -11.6
-        mask_e = np.array([x["Energy_Flux100"]>10**cut_e for x in blazars])
-        blazars = np.array(blazars[mask_e])
+        mask_e = np.array(blazars["Energy_Flux100"]>10**cut_e)
+        blazars = blazars[mask_e]
 
-        maps = [
-            ("RAJ2000", "ra_rad"),
-            ("DEJ2000", "dec_rad"),
-        ]
-
-        for (old_key, new_key) in maps:
-
-            blazars = rename_fields(blazars, {old_key: new_key})
-
-        mask_GP = [is_outside_GP(blazars['ra_rad'][i],blazars['dec_rad'][i]) for i in range(len(blazars))]
-        blazars = blazars[mask_GP] 
+        maps = {
+            "RAJ2000": "ra_deg",
+            "DEJ2000": "dec_deg",
+        }
         
-        ####################
-        #fluxes = blazars['Energy_Flux100'].byteswap().newbyteorder()
-        #blazar_df = pd.DataFrame({'flux': fluxes})
-        #blazar_df['bins'] = pd.cut(blazar_df['flux'],50)
-        #blazar_df2 = blazar_df.groupby('bins').agg({'flux': sum, 'bins': 'count'}).rename(columns = {'bins': 'count', 'flux':'background'}).reset_index()
-        #blazar_df2['flux2'] = (len(blazars)/sum(blazar_df2['background']))*blazar_df2['background']
-        #blazar_df2['s/b'] = blazar_df2['flux2']/(blazar_df2['count'])
-        #blazar_df = blazar_df.merge(blazar_df2,how='left',on='bins')
-        #blazars = np.lib.recfunctions.append_fields(blazars, 's/b', blazar_df['s/b'].values)
+        blazars = blazars.rename(columns=maps)
+        blazars.insert(2, 'dec_rad', blazars['dec_deg']*np.pi/180.)
+        blazars.insert(2, 'ra_rad', blazars['ra_deg']*np.pi/180.)
+
+        # Apply cut on latitude 
+        new_index = np.arange(len(blazars))
+        blazars = blazars.set_index(new_index)
+        
+        mask_GP = [
+            is_outside_GP(
+                blazars.at[i, 'ra_deg'],blazars.at[i, 'dec_deg']
+            ) for i in range(len(blazars))
+        ]
+        blazars = blazars[mask_GP]
+        new_index = np.arange(len(blazars))
+        blazars = blazars.set_index(new_index)
+        blazars.insert(
+            len(blazars.keys()), 'bkg_pdf', np.empty(len(blazars))
+        )
 
         logging.info("Found {0} sources in total".format(len(blazars)))
 
         return blazars
-
-    def scramble(self):
-        ra, dec = self.scramble_positions()
-        cat = np.copy(self.data)
-        cat['ra_rad'] = ra
-        cat["dec_rad"] = dec
-        return cat
-
-class AstrogeoBlazarCatalogue(IsotropicExtragalacticCatalogue):
 
     @staticmethod
-    def parse_data():
-
-        logger = logging.Logger("default_logger")
-        logger.setLevel("DEBUG")
-
-        d = []
-        with open(os.path.join(alertstack_data_dir,'rfc_2019d_cat.txt'), 'r') as f:
-            for line in f:
-                if not line.startswith('#'):
-                    d.append(
-                        {
-                            'Category': line.split()[0], 
-                            'IVS name': line.split()[1], 
-                            'J2000 name': line.split()[2], 
-                            'ra': [float(i) for i in line.split()[3:6]], 
-                            'dec': [float(i) for i in line.split()[6:9]],  
-                            'N of obs': int(line.split()[12]), 
-                            'S band map': line.split()[13], 
-                            'S band unresolved': line.split()[14],
-                            'C band map': line.split()[15],
-                            'C band unresolved': line.split()[16],            
-                            'X band map': float(line.split()[17]), 
-                            'X band unresolved': line.split()[18], 
-                            'U band map': line.split()[19],
-                            'U band unresolved': line.split()[20], 
-                            'K band map': line.split()[21], 
-                            'K band unresolved': line.split()[22],
-                            'Type': line.split()[23], 
-                            'Catalog': line.split()[24] 
-                        }
-                    )
-            df = pd.DataFrame(d)
+    def set_gp_threshold():
+        """Set a cut in galactic latitude for the catalogue
+        (exclude the sources with a smaller latitude in absolute value).
+        """
+        return 10.
         
-        #cat = np.sort(cat, order="Energy_Flux100")[::-1] # to do
+    @staticmethod
+    def set_min_declination():
+        """Set a cut in declination for the catalogue.
+        """
+        return -90.
 
-        logging.info("Selecting blazars with S > 0.15 mJy")
-
-        blazars = df.loc[df['X band map']>=0.15]
-        blazars.reset_index(drop=True,inplace=True)
-
-        blazars_ras = list(blazars['ra'])
-        blazars_decs = list(blazars['dec'])
-        blazars_ras = ['{0:.0f}h{1:.0f}m{2}s'.format(i[0],i[1],i[2]) for i in blazars_ras]
-        blazars_decs = ['{0:.0f}d{1:.0f}m{2}s'.format(i[0],i[1],i[2]) for i in blazars_decs]
-        blazars_coord = [blazars_ras[i] + " " + decs for i,decs in enumerate(blazars_decs)]
-        blazars_coord = [SkyCoord(i, frame=ICRS) for i in blazars_coord]
-        blazars['ra_rad'] = [c.ra.deg for c in blazars_coord] # called like this but it's in deg actually (same for 4LAC)
-        blazars['dec_rad'] = [c.dec.deg for c in blazars_coord]
-
-        mask_GP = [is_outside_GP(blazars['ra_rad'][i],blazars['dec_rad'][i]) for i in range(len(blazars))]
-        blazars = blazars[mask_GP] 
-
-        logging.info("Found {0} sources in total".format(len(blazars)))
-        
-        blazars = blazars.to_records(index = False)
-
-        return blazars
-        
-    def scramble(self):
-        ra, dec = self.scramble_positions()
-        cat = np.copy(self.data)
-        #cat = self.data.copy()
-        cat['ra_rad'] = ra
-        cat['dec_rad'] = dec
-        return cat
 
 class AverageFluxWeightHypothesis(Hypothesis):
+    """Hypothesis of constant emission from the fermi blazars
+    (average flux as weight)
+    """
     name = "average_flux_weight"
+    unit = "erg cm-2 s-1"
 
     @staticmethod
     def weight_catalogue(cat_data):
+        """Weight the catalogue
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        """
         try:
-            return cat_data["Energy_Flux100"]#Energy_Flux100
+            return cat_data["Energy_Flux100"]
         except:
             return cat_data['X band map']
 
+        
 class BrightestFluxWeightHypothesis(Hypothesis):
+    """Hypothesis of constant emission from the fermi blazars
+    (average flux as weight). Option to select only the 100 brightest
+    [Probably necessary for older tests. Should it be kept?]
+    """
     name = "brightest_flux_weight"
+    unit = "erg cm-2 s-1"
 
     @staticmethod
     def weight_catalogue(cat_data):
+        """Weight the catalogue
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        """
         weights = cat_data["Energy_Flux100"]
         weights[100:] = 0.
         return weights
+    
+    
+class MonthlyFluxWeightHypothesis(Hypothesis):
+    '''
+    In this hypothesis the blazar is weighted by the flux in the monthly time 
+    bin of the neutrino arrival time (nu_at).
+    '''
+    name = "monthly_flux_weight"
+    unit = "MeV cm-2 s-1"
 
+    @staticmethod
+    def weight_catalogue(cat_data, nu_at):
+        """Weight the catalogue
+
+        Parameters
+        ----------
+        cat_data: `pandas.DataFrame`
+            catalogue to weight
+        nu_at: `float`
+            neutrino arrival time
+        """
+
+        weights = [data_lc[name][nu_at] for name in cat_data['Source_Name']]
+                
+        return weights
+    

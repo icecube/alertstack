@@ -16,24 +16,25 @@ setuptools.setup(
     url="https://github.com/icecube/alertstack",
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.12",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.12',
     install_requires=[
-        "numpy>=1.17.0",
+        "numpy>=1.17.0,<2",
         "healpy",
+        "mhealpy",
         "scipy",
         "matplotlib",
         "astropy",
+        "pandas",
         "coveralls",
-        "tqdm>=4.42.0"
+        "tqdm>=4.42.0",
+        "hellolancel @ git+https://github.com/sjoertvv/HelloLancel.git@main",
     ],
     package_data={'alertstack': [
-        'alertstack/data/*']},
+        'data/*']},
     include_package_data=True
 )
 

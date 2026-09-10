@@ -1,2 +1,8 @@
 */*.pyc
+*/*/*.pyc
+*/*/*/*.pyc
 examples/*/cache/*
+*/*checkpoint.*
+*/*/*checkpoint.*
+*/*/*/*checkpoint.*
+*/*/*/*/*checkpoint.*
